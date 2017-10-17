@@ -32,13 +32,13 @@ object Types {
   case class varuint(size: Int, value: Long) {
     require(0 <= value && value <= pow(2, size) - 1)
 
-    val pack: Stream[Byte] = packUnsigned(size, value) toStream
+    val pack: Stream[Byte] = LEB128.Unsigned.pack(size, value) toStream
   }
 
   case class varint(size: Int, value: Long) {
     require(-pow(2, size - 1) <= value && value <= pow(2, size - 1) - 1)
 
-    val pack: Stream[Byte] = packSigned(size, value) toStream
+    val pack: Stream[Byte] = LEB128.Signed.pack(size, value) toStream
   }
 
 
