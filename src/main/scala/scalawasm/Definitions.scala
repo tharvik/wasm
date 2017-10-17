@@ -1,8 +1,7 @@
 package scalawasm
 
 import scalawasm.Utils.{packToUint32, uint32ToStream}
-import scalawasm.binary.Alias._
-import scalawasm.binary.{uint, varint}
+import scalawasm.binary.Types.uint32
 
 
 trait BinaryEncoding {

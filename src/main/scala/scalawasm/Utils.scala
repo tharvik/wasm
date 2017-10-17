@@ -1,6 +1,6 @@
 package scalawasm
 
-import scalawasm.binary.Alias._
+import scalawasm.binary.Types.uint32
 
 object Utils {
   def packToUint32(i: Int): uint32 = (

@@ -2,7 +2,7 @@ package scalawasm.sections
 
 import scalawasm._
 import scalawasm.binary._
-import scalawasm.binary.Alias._
+import scalawasm.binary.Types._
 
 sealed trait import_entry extends BinaryEncoding {
   val module: String

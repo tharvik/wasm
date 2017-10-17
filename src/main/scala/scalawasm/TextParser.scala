@@ -1,7 +1,7 @@
 package scalawasm
 
 import scala.util.parsing.combinator.RegexParsers
-import scalawasm.binary._
+import scalawasm.binary.Types._
 
 class TextParser extends RegexParsers {
   //lexical.delimiters ++= List("(", ")")

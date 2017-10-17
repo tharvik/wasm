@@ -4,7 +4,7 @@ import org.scalatest._
 
 import scala.io.Source.fromFile
 import scala.sys.process._
-import scalawasm.binary._
+import scalawasm.binary.Types._
 
 class ToBinarySpec extends FlatSpec with Matchers {
   "The empty module" should "be equals to the reference" in {
