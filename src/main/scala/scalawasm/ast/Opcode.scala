@@ -30,9 +30,10 @@ object Opcode {
   final case class If(sig: Type.Trait.Block) extends ControlFlow
   final case object Else extends ControlFlow
   final case object End extends ControlFlow
-  final case class Br(relative_depth: Int) extends ControlFlow
-  final case class BrIf(relative_depth: Int) extends ControlFlow
-  final case class BrTable(targets: Seq[Int], default: Int) extends ControlFlow
+  final case class Br(label: Variable) extends ControlFlow
+  final case class BrIf(label: Variable) extends ControlFlow
+  final case class BrTable(lables: Seq[Variable]) extends ControlFlow
+  // TODO final case class BrTable(targets: Seq[Int], default: Int) extends ControlFlow
   final case object Return extends ControlFlow
 
   // TODO auto type_index

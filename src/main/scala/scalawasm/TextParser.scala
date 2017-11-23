@@ -2,6 +2,8 @@ package scalawasm
 
 import scala.math
 import scala.util.parsing.combinator.RegexParsers
+import scalawasm.{ast => A}
+import scalawasm.ast.{Type => AT}
 import scalawasm.ast.Opcode
 
 class TextParser extends RegexParsers {
@@ -21,7 +23,7 @@ class TextParser extends RegexParsers {
   def string: Parser[String] = """"([a-zA-Z]|\\([nt\\'"]|[0-9a-fA-F]{2}|u{[0-9a-fA-F]+}))*"""".r
 
   // --
-  def elem_type: Parser[ast.Type.Trait.Element] = "anyfunc" ^^^ ast.Type.anyfunc
+  def elemType: Parser[ast.Type.Trait.Element] = "anyfunc" ^^^ ast.Type.anyfunc
 
   def offset: Parser[Int] = "offset=" ~> valueInt
   def align: Parser[Int] = "align=" ~> valueInt  // TODO only power of two
@@ -31,6 +33,27 @@ class TextParser extends RegexParsers {
       val a = align.map { i: Int => math.log(i) / math.log(2) }.map { _.toInt } getOrElse 0
       Opcode.memory_immediate(a, o)
   }
+
+  def op: Parser[Opcode] =
+    ( "unreachable" ^^^ Opcode.Unreachable
+    | "nop" ^^^ Opcode.Nop
+    | "br" ~> variable ^^ Opcode.Br
+    | "br_if" ~> variable ^^ Opcode.BrIf
+    | "br_table" ~> rep(variable) ^^ Opcode.BrTable
+    | "return" ^^^ Opcode.Return
+    | "call" ~> variable ^^ Opcode.Call
+    | "call_indirect" ~> variable ^^ Opcode.CallIndirect
+    | "drop" ^^^ Opcode.Drop
+    | "select" ^^^ Opcode.Select
+    | "get_local" ~> variable ^^ Opcode.GetLocal
+    | "set_local" ~> variable ^^ Opcode.SetLocal
+    | "tee_local" ~> variable ^^ Opcode.TeeLocal
+    | "get_global" ~> variable ^^ Opcode.GetGlobal
+    | "set_global" ~> variable ^^ Opcode.SetGlobal
+    | "current_memory" ^^^ Opcode.CurrentMemory
+    | "grow_memory" ^^^ Opcode.GrowMemory
+    | i32 | i64 | f32 | f64
+    )
 
   def i32: Parser[ast.Opcode] =
     ( "i32.load" ~> memory_immediate ^^ Opcode.i32.Load
@@ -42,6 +65,20 @@ class TextParser extends RegexParsers {
     | "i32.store8" ~> memory_immediate ^^ Opcode.i32.Store8
     | "i32.store16" ~> memory_immediate ^^ Opcode.i32.Store16
     | "i32.const" ~> valueInt ^^ Opcode.i32.Const
+    | "i32.eq" ^^^ Opcode.i32.Equal
+    | "i32.eqz" ^^^ Opcode.i32.EqualZero
+    | "i32.ne" ^^^ Opcode.i32.NotEqual
+    | "i32.lt_s" ^^^ Opcode.i32.LessThanSigned
+    | "i32.lt_u" ^^^ Opcode.i32.LessThanUnsigned
+    | "i32.gt_s" ^^^ Opcode.i32.GreaterThanSigned
+    | "i32.gt_u" ^^^ Opcode.i32.GreaterThanUnsigned
+    | "i32.le_s" ^^^ Opcode.i32.LessOrEqualSigned
+    | "i32.le_u" ^^^ Opcode.i32.LessOrEqualUnsigned
+    | "i32.ge_s" ^^^ Opcode.i32.GreaterOrEqualSigned
+    | "i32.ge_u" ^^^ Opcode.i32.GreaterOrEqualUnsigned
+    | "i32.clz" ^^^ Opcode.i32.CountLeadingZeros
+    | "i32.ctz" ^^^ Opcode.i32.CountTrailingZeros
+    | "i32.popcnt" ^^^ Opcode.i32.CountNumberOneBits
     | "i32.add" ^^^ Opcode.i32.Add
     | "i32.sub" ^^^ Opcode.i32.Subtracte
     | "i32.mul" ^^^ Opcode.i32.Multiply
@@ -57,20 +94,6 @@ class TextParser extends RegexParsers {
     | "i32.shr_s" ^^^ Opcode.i32.ShiftRightSigned
     | "i32.rotl" ^^^ Opcode.i32.RotateLeft
     | "i32.rotr" ^^^ Opcode.i32.RotateRight
-    | "i32.eq" ^^^ Opcode.i32.Equal
-    | "i32.ne" ^^^ Opcode.i32.NotEqual
-    | "i32.lt_s" ^^^ Opcode.i32.LessThanSigned
-    | "i32.lt_u" ^^^ Opcode.i32.LessThanUnsigned
-    | "i32.le_s" ^^^ Opcode.i32.LessOrEqualSigned
-    | "i32.le_u" ^^^ Opcode.i32.LessOrEqualUnsigned
-    | "i32.gt_s" ^^^ Opcode.i32.GreaterThanSigned
-    | "i32.gt_u" ^^^ Opcode.i32.GreaterThanUnsigned
-    | "i32.ge_s" ^^^ Opcode.i32.GreaterOrEqualSigned
-    | "i32.ge_u" ^^^ Opcode.i32.GreaterOrEqualUnsigned
-    | "i32.clz" ^^^ Opcode.i32.CountLeadingZeros
-    | "i32.ctz" ^^^ Opcode.i32.CountTrailingZeros
-    | "i32.popcnt" ^^^ Opcode.i32.CountNumberOneBits
-    | "i32.eqz" ^^^ Opcode.i32.EqualZero
     | "i32.wrap/i64" ^^^ Opcode.i32.WrapFromInt64
     | "i32.trunc_s/f32" ^^^ Opcode.i32.TruncateSignedFromFloat32
     | "i32.trunc_u/f32" ^^^ Opcode.i32.TruncateUnsignedFromFloat32
@@ -81,150 +104,235 @@ class TextParser extends RegexParsers {
 
   def i64: Parser[ast.Opcode] =
     ( "i64.load" ~> memory_immediate ^^ Opcode.i64.Load
-      | "i64.load8_s" ~> memory_immediate ^^ Opcode.i64.Load8Signed
-      | "i64.load8_u" ~> memory_immediate ^^ Opcode.i64.Load8Unsigned
-      | "i64.load16_s" ~> memory_immediate ^^ Opcode.i64.Load16Signed
-      | "i64.load16_u" ~> memory_immediate ^^ Opcode.i64.Load16Unsigned
-      | "i64.store" ~> memory_immediate ^^ Opcode.i64.Store
-      | "i64.store8" ~> memory_immediate ^^ Opcode.i64.Store8
-      | "i64.store16" ~> memory_immediate ^^ Opcode.i64.Store16
-      | "i64.const" ~> valueLong ^^ Opcode.i64.Const
-      | "i64.add" ^^^ Opcode.i64.Add
-      | "i64.sub" ^^^ Opcode.i64.Subtracte
-      | "i64.mul" ^^^ Opcode.i64.Multiply
-      | "i64.div_s" ^^^ Opcode.i64.DivideSigned
-      | "i64.div_u" ^^^ Opcode.i64.DivideUnsigned
-      | "i64.rem_s" ^^^ Opcode.i64.RemainderSigned
-      | "i64.rem_u" ^^^ Opcode.i64.RemainderUnsigned
-      | "i64.and" ^^^ Opcode.i64.And
-      | "i64.or" ^^^ Opcode.i64.Or
-      | "i64.xor" ^^^ Opcode.i64.Xor
-      | "i64.shl" ^^^ Opcode.i64.ShiftLeft
-      | "i64.shr_u" ^^^ Opcode.i64.ShiftRightUnsigned
-      | "i64.shr_s" ^^^ Opcode.i64.ShiftRightSigned
-      | "i64.rotl" ^^^ Opcode.i64.RotateLeft
-      | "i64.rotr" ^^^ Opcode.i64.RotateRight
-      | "i64.eq" ^^^ Opcode.i64.Equal
-      | "i64.ne" ^^^ Opcode.i64.NotEqual
-      | "i64.lt_s" ^^^ Opcode.i64.LessThanSigned
-      | "i64.lt_u" ^^^ Opcode.i64.LessThanUnsigned
-      | "i64.le_s" ^^^ Opcode.i64.LessOrEqualSigned
-      | "i64.le_u" ^^^ Opcode.i64.LessOrEqualUnsigned
-      | "i64.gt_s" ^^^ Opcode.i64.GreaterThanSigned
-      | "i64.gt_u" ^^^ Opcode.i64.GreaterThanUnsigned
-      | "i64.ge_s" ^^^ Opcode.i64.GreaterOrEqualSigned
-      | "i64.ge_u" ^^^ Opcode.i64.GreaterOrEqualUnsigned
-      | "i64.clz" ^^^ Opcode.i64.CountLeadingZeros
-      | "i64.ctz" ^^^ Opcode.i64.CountTrailingZeros
-      | "i64.popcnt" ^^^ Opcode.i64.CountNumberOneBits
-      | "i64.eqz" ^^^ Opcode.i64.EqualZero
-      | "i64.trunc_s/f32" ^^^ Opcode.i64.TruncateSignedFromFloat32
-      | "i64.trunc_u/f32" ^^^ Opcode.i64.TruncateUnsignedFromFloat32
-      | "i64.trunc_s/f64" ^^^ Opcode.i64.TruncateSignedFromFloat64
-      | "i64.trunc_u/f64" ^^^ Opcode.i64.TruncateUnsignedFromFloat64
-      | "i64.reinterpret/f32" ^^^ Opcode.i64.ReinterpretFromFloat64
+    | "i64.load8_s" ~> memory_immediate ^^ Opcode.i64.Load8Signed
+    | "i64.load8_u" ~> memory_immediate ^^ Opcode.i64.Load8Unsigned
+    | "i64.load16_s" ~> memory_immediate ^^ Opcode.i64.Load16Signed
+    | "i64.load16_u" ~> memory_immediate ^^ Opcode.i64.Load16Unsigned
+    | "i64.load32_s" ~> memory_immediate ^^ Opcode.i64.Load32Signed
+    | "i64.load32_u" ~> memory_immediate ^^ Opcode.i64.Load32Unsigned
+    | "i64.store" ~> memory_immediate ^^ Opcode.i64.Store
+    | "i64.store8" ~> memory_immediate ^^ Opcode.i64.Store8
+    | "i64.store16" ~> memory_immediate ^^ Opcode.i64.Store16
+    | "i64.store32" ~> memory_immediate ^^ Opcode.i64.Store32
+    | "i64.const" ~> valueLong ^^ Opcode.i64.Const
+    | "i64.eqz" ^^^ Opcode.i64.EqualZero
+    | "i64.eq" ^^^ Opcode.i64.Equal
+    | "i64.ne" ^^^ Opcode.i64.NotEqual
+    | "i64.lt_s" ^^^ Opcode.i64.LessThanSigned
+    | "i64.lt_u" ^^^ Opcode.i64.LessThanUnsigned
+    | "i64.gt_s" ^^^ Opcode.i64.GreaterThanSigned
+    | "i64.gt_u" ^^^ Opcode.i64.GreaterThanUnsigned
+    | "i64.le_s" ^^^ Opcode.i64.LessOrEqualSigned
+    | "i64.le_u" ^^^ Opcode.i64.LessOrEqualUnsigned
+    | "i64.ge_s" ^^^ Opcode.i64.GreaterOrEqualSigned
+    | "i64.ge_u" ^^^ Opcode.i64.GreaterOrEqualUnsigned
+    | "i64.clz" ^^^ Opcode.i64.CountLeadingZeros
+    | "i64.ctz" ^^^ Opcode.i64.CountTrailingZeros
+    | "i64.popcnt" ^^^ Opcode.i64.CountNumberOneBits
+    | "i64.add" ^^^ Opcode.i64.Add
+    | "i64.sub" ^^^ Opcode.i64.Subtracte
+    | "i64.mul" ^^^ Opcode.i64.Multiply
+    | "i64.div_s" ^^^ Opcode.i64.DivideSigned
+    | "i64.div_u" ^^^ Opcode.i64.DivideUnsigned
+    | "i64.rem_s" ^^^ Opcode.i64.RemainderSigned
+    | "i64.rem_u" ^^^ Opcode.i64.RemainderUnsigned
+    | "i64.and" ^^^ Opcode.i64.And
+    | "i64.or" ^^^ Opcode.i64.Or
+    | "i64.xor" ^^^ Opcode.i64.Xor
+    | "i64.shl" ^^^ Opcode.i64.ShiftLeft
+    | "i64.shr_s" ^^^ Opcode.i64.ShiftRightSigned
+    | "i64.shr_u" ^^^ Opcode.i64.ShiftRightUnsigned
+    | "i64.rotl" ^^^ Opcode.i64.RotateLeft
+    | "i64.rotr" ^^^ Opcode.i64.RotateRight
+    | "i64.extend_s/i32" ^^^ Opcode.i64.ExtendSignedFromInt32
+    | "i64.extend_u/i32" ^^^ Opcode.i64.ExtendUnsignedFromInt32
+    | "i64.trunc_s/f32" ^^^ Opcode.i64.TruncateSignedFromFloat32
+    | "i64.trunc_u/f32" ^^^ Opcode.i64.TruncateUnsignedFromFloat32
+    | "i64.trunc_s/f64" ^^^ Opcode.i64.TruncateSignedFromFloat64
+    | "i64.trunc_u/f64" ^^^ Opcode.i64.TruncateUnsignedFromFloat64
+    | "i64.reinterpret/f64" ^^^ Opcode.i64.ReinterpretFromFloat64
+    )
+
+  def f32: Parser[ast.Opcode] =
+    ( "f32.load" ~> memory_immediate ^^ Opcode.f32.Load
+    | "f32.store" ~> memory_immediate ^^ Opcode.f32.Store
+    | "f32.const" ~> valueFloat ^^ Opcode.f32.Const
+    | "f32.eq" ^^^ Opcode.f32.Equal
+    | "f32.ne" ^^^ Opcode.f32.NotEqual
+    | "f32.lt" ^^^ Opcode.f32.LessThan
+    | "f32.gt" ^^^ Opcode.f32.GreaterThan
+    | "f32.le" ^^^ Opcode.f32.LessOrEqual
+    | "f32.ge" ^^^ Opcode.f32.GreaterOrEqual
+    | "f32.abs" ^^^ Opcode.f32.Absolute
+    | "f32.neg" ^^^ Opcode.f32.Negative
+    | "f32.ceil" ^^^ Opcode.f32.Ceiling
+    | "f32.floor" ^^^ Opcode.f32.Floor
+    | "f32.trunc" ^^^ Opcode.f32.Truncate
+    | "f32.nearest" ^^^ Opcode.f32.Nearest
+    | "f32.sqrt" ^^^ Opcode.f32.Sqrt
+    | "f32.add" ^^^ Opcode.f32.Add
+    | "f32.sub" ^^^ Opcode.f32.Substract
+    | "f32.mul" ^^^ Opcode.f32.Multiply
+    | "f32.div" ^^^ Opcode.f32.Divide
+    | "f32.min" ^^^ Opcode.f32.Min
+    | "f32.max" ^^^ Opcode.f32.Max
+    | "f32.copysign" ^^^ Opcode.f32.CopySign
+    | "f32.convert_s/i32" ^^^ Opcode.f32.ConvertSignedFromInt32
+    | "f32.convert_u/i32" ^^^ Opcode.f32.ConvertUnsignedFromInt32
+    | "f32.convert_s/i64" ^^^ Opcode.f32.ConvertSignedFromInt64
+    | "f32.convert_u/i64" ^^^ Opcode.f32.ConvertUnsignedFromInt64
+    | "f32.demote/f64" ^^^ Opcode.f32.DemoteFromFloat64
+    | "f32.reinterpret/i32" ^^^ Opcode.f32.ReinterpretFromInt32
+    )
+
+  def f64: Parser[ast.Opcode] =
+    ( "f64.load" ~> memory_immediate ^^ Opcode.f64.Load
+      | "f64.store" ~> memory_immediate ^^ Opcode.f64.Store
+      | "f64.const" ~> valueDouble ^^ Opcode.f64.Const
+      | "f64.eq" ^^^ Opcode.f64.Equal
+      | "f64.ne" ^^^ Opcode.f64.NotEqual
+      | "f64.lt" ^^^ Opcode.f64.LessThan
+      | "f64.gt" ^^^ Opcode.f64.GreaterThan
+      | "f64.le" ^^^ Opcode.f64.LessOrEqual
+      | "f64.ge" ^^^ Opcode.f64.GreaterOrEqual
+      | "f64.abs" ^^^ Opcode.f64.Absolute
+      | "f64.neg" ^^^ Opcode.f64.Negative
+      | "f64.ceil" ^^^ Opcode.f64.Ceiling
+      | "f64.floor" ^^^ Opcode.f64.Floor
+      | "f64.trunc" ^^^ Opcode.f64.Truncate
+      | "f64.nearest" ^^^ Opcode.f64.Nearest
+      | "f64.sqrt" ^^^ Opcode.f64.Sqrt
+      | "f64.add" ^^^ Opcode.f64.Add
+      | "f64.sub" ^^^ Opcode.f64.Substract
+      | "f64.mul" ^^^ Opcode.f64.Multiply
+      | "f64.div" ^^^ Opcode.f64.Divide
+      | "f64.min" ^^^ Opcode.f64.Min
+      | "f64.max" ^^^ Opcode.f64.Max
+      | "f64.copysign" ^^^ Opcode.f64.CopySign
+      | "f64.convert_s/i32" ^^^ Opcode.f64.ConvertSignedFromInt32
+      | "f64.convert_u/i32" ^^^ Opcode.f64.ConvertUnsignedFromInt32
+      | "f64.convert_s/i64" ^^^ Opcode.f64.ConvertSignedFromInt64
+      | "f64.convert_u/i64" ^^^ Opcode.f64.ConvertUnsignedFromInt64
+      | "f64.promote/f64" ^^^ Opcode.f64.PromoteFromFloat32
+      | "f64.reinterpret/i64" ^^^ Opcode.f64.ReinterpretFromInt64
       )
 
+  def valueType: Parser[AT.Trait.Value] =
+    ( "i32" ^^^ AT.i32
+    | "i64" ^^^ AT.i64
+    | "f32" ^^^ AT.f32
+    | "f64" ^^^ AT.f64
+    )
 
+  def blockSig: Parser[Seq[List[AT.Trait.Value]]] = rep("(" ~ "result" ~> rep(valueType) <~ ")")
+  def funcSig: Parser[(Option[ast.Variable], AT.Function)] =
+    opt("(" ~ "type" ~> variable <~ ")") ~ rep(param) ~ rep(result) ^? {
+      case v ~ params ~ results if results.count(_.isDefined) > 1 =>
+        val ret = results.filter{_.isDefined}.head
+        (v, AT.Function(params, ret))
+    }
+  def globalSig: Parser[AT.Global] =
+    ( valueType ^^ { t => AT.Global(t, false) }
+    | "(" ~ "mut" ~> valueType <~ ")" ^^ { t => AT.Global(t, true) }
+    )
+  def tableSig: Parser[AT.Table] =
+    valueInt ~ opt(valueInt) ~ elemType ^^ { case min ~ max ~ tpe => AT.Table(tpe, AT.ResizableLimits(min, max)) }
+  def memorySig: Parser[AT.Memory] =
+    valueInt ~ opt(valueInt) ^^ { case min ~ max => AT.Memory(AT.ResizableLimits(min, max)) }
 
-  /*
-  binop: add | sub | mul | ...
-  relop: eq | ne | lt | ...
-  sign: s|u
-  offset: offset=<nat>
-  align: align=(1|2|4|8|...)
-  cvtop: trunc_s | trunc_u | extend_s | extend_u | ...
+  def expr: Parser[???] = "(" ~>
+    ( op ~ rep(expr)
+    | "block" ~> opt(name) ~ blockSig ~ rep(instr)
+    | "loop" ~> opt(name) ~ blockSig ~ rep(instr)
+    | "if" ~> opt(name) ~ blockSig ~ rep(expr) <~ "(" ~ "then" ~> rep(instr) <~ ")" ~> opt("(" ~ "else" ~> rep(instr) <~ ")")
+    ) <~ ")"
 
-  block_sig : ( result <value_type>* )*
-  func_sig:   ( type <var> )? <param>* <result>*
-  global_sig: <value_type> | ( mut <value_type> )
-  table_sig:  <nat> <nat>? <elem_type>
-  memory_sig: <nat> <nat>?
+  def instr: Parser[???] = {
+    def blockBased(id: String) = id ~>
+      ( blockSig ~ rep(instr) ~ "end"
+      | (name into { n => blockSig ~ rep(instr) <~ "end" ~ n })
+      )
 
-  expr:
-    ( <op> )
-    ( <op> <expr>+ )                                                  ;; = <expr>+ (<op>)
-    ( block <name>? <block_sig> <instr>* )
-    ( loop <name>? <block_sig> <instr>* )
-    ( if <name>? <block_sig> ( then <instr>* ) ( else <instr>* )? )
-    ( if <name>? <block_sig> <expr>+ ( then <instr>* ) ( else <instr>* )? ) ;; = <expr>+ (if <name>? <block_sig> (then <instr>*) (else <instr>*)?)
+    ( expr
+    | op
+    | blockBased("block")
+    | blockBased("loop")
+    | blockBased("if")
+    )
+  }
 
-  instr:
-    <expr>
-    <op>                                                              ;; = (<op>)
-    block <name>? <block_sig> <instr>* end <name>?                    ;; = (block <name>? <block_sig> <instr>*)
-    loop <name>? <block_sig> <instr>* end <name>?                     ;; = (loop <name>? <block_sig> <instr>*)
-    if <name>? <block_sig> <instr>* end <name>?                       ;; = (if <name>? <block_sig> (then <instr>*))
-    if <name>? <block_sig> <instr>* else <name>? <instr>* end <name>? ;; = (if <name>? <block_sig> (then <instr>*) (else <instr>*))
+  def func: Parser[???] = "(" ~ "func" ~>
+    ( opt(name) ~ funcSig ~ rep(local) ~ rep(instr)
+    | opt(name) <~ rep1("(" ~ "export" ~> string <~ ")") ~ funcSig ~ rep(local) ~ rep(instr)
+    | opt(name) ~ ("(" ~ "import" ~> string ~ string <~ ")") ~ funcSig
+    ) <~ ")"
 
-  op:
-    unreachable
-    nop
-    br <var>
-    br_if <var>
-    br_table <var>+
-    return
-    call <var>
-    call_indirect <var>
-    drop
-    select
-    get_local <var>
-    set_local <var>
-    tee_local <var>
-    get_global <var>
-    set_global <var>
-    <value_type>.load((8|16|32)_<sign>)? <offset>? <align>?
-    <value_type>.store(8|16|32)? <offset>? <align>?
-    current_memory
-    grow_memory
-    <value_type>.const <value>
-    <value_type>.<unop>
-    <value_type>.<binop>
-    <value_type>.<testop>
-    <value_type>.<relop>
-    <value_type>.<cvtop>/<value_type>
+  def param: Parser[???] = "(" ~ "param" ~>
+    ( rep(valueType)
+    | name ~ valueType
+  ) <~ ")"
 
-  func:    ( func <name>? <func_sig> <local>* <instr>* )
-           ( func <name>? ( export <string> )+ <func_sig> <local>* <instr>* ) ;; = (export <string> (func <N>))+ (func <name>? <func_sig> <local>* <instr>*)
-           ( func <name>? ( import <string> <string> ) <func_sig>)            ;; = (import <name>? <string> <string> (func <func_sig>))
-  param:   ( param <value_type>* ) | ( param <name> <value_type> )
-  result:  ( result <value_type> )
-  local:   ( local <value_type>* ) | ( local <name> <value_type> )
+  def result: Parser[Option[AT.Trait.Value]] =
+    "(" ~ "result" ~> rep(valueType) <~ ")" ^? { case l: Seq[AT.Trait.Value] if l.size <= 1 => l.headOption }
 
-  global:  ( global <name>? <global_sig> <instr>* )
-           ( global <name>? ( export <string> )+ <global_sig> <instr>* )      ;; = (export <string> (global <N>))+ (global <name>? <global_sig> <instr>*)
-           ( global <name>? ( import <string> <string> ) <global_sig> )       ;; = (import <name>? <string> <string> (global <global_sig>))
-  table:   ( table <name>? <table_sig> )
-           ( table <name>? ( export <string> )+ <table_sig> )                 ;; = (export <string> (table <N>))+ (table <name>? <table_sig>)
-           ( table <name>? ( import <string> <string> ) <table_sig> )         ;; = (import <name>? <string> <string> (table <table_sig>))
-           ( table <name>? ( export <string> )* <elem_type> ( elem <var>* ) ) ;; = (table <name>? ( export <string> )* <size> <size> <elem_type>) (elem (i32.const 0) <var>*)
-  elem:    ( elem <var>? (offset <instr>* ) <var>* )
-           ( elem <var>? <expr> <var>* )                                      ;; = (elem <var>? (offset <expr>) <var>*)
-  memory:  ( memory <name>? <memory_sig> )
-           ( memory <name>? ( export <string> )+ <memory_sig> )               ;; = (export <string> (memory <N>))+ (memory <name>? <memory_sig>)
-           ( memory <name>? ( import <string> <string> ) <memory_sig> )       ;; = (import <name>? <string> <string> (memory <memory_sig>))
-           ( memory <name>? ( export <string> )* ( data <string>* )           ;; = (memory <name>? ( export <string> )* <size> <size>) (data (i32.const 0) <string>*)
-  data:    ( data <var>? ( offset <instr>* ) <string>* )
-           ( data <var>? <expr> <string>* )                                   ;; = (data <var>? (offset <expr>) <string>*)
+  def local: Parser[???] = "(" ~ "local" ~>
+    ( rep(valueType)
+    | name ~ valueType
+    ) <~ ")"
 
-  start:   ( start <var> )
+  def global: Parser[???] = "(" ~ "global" ~>
+    ( opt(name) ~ globalSig ~ rep(instr)
+    | opt(name) ~ rep("(" ~ "export" ~> string <~ ")") ~ globalSig ~ rep(instr)
+    | opt(name) ~ rep("(" ~ "import" ~> string ~ string <~ ")") ~ globalSig
+    ) <~ ")"
 
-  typedef: ( type <name>? ( func <func_sig> ) )
+  def table: Parser[???] = "(" ~ "table" ~> opt(name) ~
+    ( tableSig
+    | rep1("(" ~ "export" ~> string <~ ")") ~ tableSig
+    | ("(" ~ "import" ~> string ~ string <~ ")") ~ tableSig
+    | rep("(" ~ "export" ~> string <~ ")") ~ elemType <~ "(" ~ "elem" ~> rep(variable) <~ ")"
+    ) <~ ")"
 
-  import:  ( import <string> <string> <imkind> )
-  imkind:  ( func <name>? <func_sig> )
-           ( global <name>? <global_sig> )
-           ( table <name>? <table_sig> )
-           ( memory <name>? <memory_sig> )
-  export:  ( export <string> <exkind> )
-  exkind:  ( func <var> )
-           ( global <var> )
-           ( table <var> )
-           ( memory <var> )
+  def elem: Parser[???] = "(" ~ "elem" ~> opt(variable) ~
+    ( "(" ~ "offset" ~> rep(instr) <~ ")"
+    | expr
+    ) ~ rep(variable) ~ ")"
 
-  module:  ( module <name>? <typedef>* <func>* <import>* <export>* <table>? <memory>? <global>* <elem>* <data>* <start>? )
-           ( module <name>? <string>+ )
-           <typedef>* <func>* <import>* <export>* <table>? <memory>? <global>* <elem>* <data>* <start>?  ;; =
-           ( module <typedef>* <func>* <import>* <export>* <table>? <memory>? <global>* <elem>* <data>* <start>? )
-     */
+  def memory: Parser[???] = "(" ~ "memory" ~> opt(name) ~
+    ( memorySig
+    | rep1("(" ~ "export" ~> string <~ ")") ~ memorySig
+    | ("(" ~ "import" ~> string ~ string <~ ")") ~ memorySig
+    | rep("(" ~ "import" ~> string ~ string <~ ")") ~ "(" ~ "data" ~> rep(string) <~ ")"
+    ) <~ ")"
+
+  def data: Parser[???] = "(" ~ "data" ~> opt(variable) ~
+    ( "(" ~ "offset" ~> rep(instr) <~ ")" ~ rep(string)
+    | expr ~ rep(string)
+    ) <~ ")"
+
+  def start: Parser[???] = "(" ~ "start" ~> variable <~ ")"
+  def typedef: Parser[???] = "(" ~ "type" ~> opt(name) <~ "(" ~ "func" ~> funcSig <~ ")" <~ ")"
+
+  def imprt: Parser[???] = "(" ~ "import" ~> string ~ string ~ imkind <~ ")"
+  def imkind: Parser[???] = "(" ~
+    ( "func" ~> opt(name) ~ funcSig
+    | "global" ~> opt(name) ~ globalSig
+    | "table" ~> opt(name) ~ tableSig
+    | "memory" ~> opt(name) ~ memorySig
+    ) ~ ")"
+
+  def export: Parser[???] = "(" ~ "export" ~> string ~ exkind <~ ")"
+  def exkind: Parser[???] = "(" ~
+    ( "func" ~> variable
+    | "global" ~> variable
+    | "table" ~> variable
+    | "memory" ~> variable
+    ) ~ ")"
+
+  def module: Parser[???] = {
+    def moduleArgs = rep(func) ~ rep(imprt) ~ rep(export) ~ opt(table) ~ opt(memory) ~ rep(global) ~ rep(elem) ~ rep(data) ~ opt(start)
+    ("(" ~ "module" ~> opt(name) ~ rep(typedef) ~ moduleArgs <~ ")"
+    | rep(typedef) ~ moduleArgs
+    )
+  }
 }

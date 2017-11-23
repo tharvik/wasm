@@ -15,18 +15,18 @@ object Opcode {
   def toBinary(o: ControlFlow): Stream[Byte] = o match {
       case Unreachable => Stream(0x00)
       case Nop => Stream(0x01)
-      case Block(sig: ast.Type.Trait.Block) => Stream(0x02 toByte) #::: Type.Dispatcher.toBinary(sig)
-      case Loop(sig: ast.Type.Trait.Block) => Stream(0x03 toByte) #::: Type.Dispatcher.toBinary(sig)
-      case If(sig: ast.Type.Trait.Block) => Stream(0x04 toByte) #::: Type.Dispatcher.toBinary(sig)
+      case Block(sig) => Stream(0x02 toByte) #::: Type.Dispatcher.toBinary(sig)
+      case Loop(sig) => Stream(0x03 toByte) #::: Type.Dispatcher.toBinary(sig)
+      case If(sig) => Stream(0x04 toByte) #::: Type.Dispatcher.toBinary(sig)
       case Else => Stream(0x05)
       case End => Stream(0x0b toByte)
-      case Br(relative_depth: Int) => Stream(0x0c toByte) #::: varuint32(relative_depth).pack
-      case BrIf(relative_depth: Int) => Stream(0x0d toByte) #::: varuint32(relative_depth).pack
-      case BrTable(targets: Seq[Int], default: Int) =>
+      // TODO case Br(relative_depth: Int) => Stream(0x0c toByte) #::: varuint32(relative_depth).pack
+      // TODO case BrIf(relative_depth: Int) => Stream(0x0d toByte) #::: varuint32(relative_depth).pack
+      /* TODO case BrTable(targets: Seq[Int], default: Int) =>
         Stream(0x0e toByte) #:::
           varuint32(targets.size).pack #:::
           targets.flatMap {varuint32(_).pack}.toStream #:::
-          varuint32(default).pack
+          varuint32(default).pack*/
       case Return => Stream(0x0f toByte)
     }
   /*
@@ -41,16 +41,16 @@ object Opcode {
   sealed trait Reinterpretation extends Opcode
  */
 
-    def toBinary(v: Variable): Stream[Byte] = {
-      val (op, index) = v match {
-        case GetLocal(i: Int) => (0x20, i)
-        case SetLocal(i: Int) => (0x21, i)
-        case TeeLocal(i: Int) => (0x22, i)
-        case GetGlobal(i: Int) => (0x23, i)
-        case SetGlobal(i: Int) => (0x24, i)
-      }
-      Stream(op toByte) #::: varuint32(index).pack
+  def toBinary(v: Variable): Stream[Byte] = {
+    val (op, index) = v match {
+      case GetLocal(i: Int) => (0x20, i)
+      case SetLocal(i: Int) => (0x21, i)
+      case TeeLocal(i: Int) => (0x22, i)
+      case GetGlobal(i: Int) => (0x23, i)
+      case SetGlobal(i: Int) => (0x24, i)
     }
+    Stream(op toByte) #::: varuint32(index).pack
+  }
 }
 
   /*

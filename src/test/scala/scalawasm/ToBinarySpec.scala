@@ -4,7 +4,10 @@ import org.scalatest._
 
 import scala.io.Source.fromFile
 import scala.sys.process._
-import scalawasm.binary.Types._
+import scalawasm.ast.Preamble
+import scalawasm.{binary => B}
+import scalawasm.binary.{Type => BT}
+import scalawasm.ast.{Type => AT}
 
 class ToBinarySpec extends FlatSpec with Matchers {
   "The empty module" should "be equals to the reference" in {
@@ -26,19 +29,22 @@ class ToBinarySpec extends FlatSpec with Matchers {
   //def checkSameBinary(code: Preamble)
 
   def checkSameBinary(code: Preamble, text: String) = {
-    val own = code.toBinary
+    val own = B.toBinary(code)
     val ref = getReferenceBinary(text)
 
     own should be (ref)
   }
 
   "types" should "correctly translate to binary" in {
-    i32().toBinary should be (Stream(0x7f toByte))
-    i64().toBinary should be (Stream(0x7e toByte))
-    f32().toBinary should be (Stream(0x7d toByte))
-    f64().toBinary should be (Stream(0x7c toByte))
-    anyfunc().toBinary should be (Stream(0x70 toByte))
-    func().toBinary should be (Stream(0x60 toByte))
+    BT.toBinary(AT.i32) should be (Stream(0x7f toByte))
+    BT.toBinary(AT.i64) should be (Stream(0x7e toByte))
+    BT.toBinary(AT.f32) should be (Stream(0x7d toByte))
+    BT.toBinary(AT.f64) should be (Stream(0x7c toByte))
+    BT.toBinary(AT.anyfunc) should be (Stream(0x70 toByte))
+    BT.toBinary(AT.func) should be (Stream(0x60 toByte))
+  }
+
+  "inline-module.wast" should "correctly translate to binary" in {
   }
 }
 

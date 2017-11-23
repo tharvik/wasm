@@ -14,8 +14,8 @@ package object binary {
       val version = 1
 
       magic #:::
-        uint32(version).pack /*#:::
-        (sections flatMap toBinary).toStream*/
+        uint32(version).pack #:::
+        (sections flatMap toBinary).toStream
     case t: Opcode =>
       B.Opcode.toBinary(t)
   }

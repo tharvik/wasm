@@ -1,11 +1,7 @@
 package scalawasm
 
 package object ast {
-  object Trait {
-    abstract class Term
-  }
-
-  final case class Preamble(sections: Seq[Section]) extends Trait.Term
+  final case class Preamble(sections: Seq[Section])
 
   sealed trait Variable
   final case class VariableWithIndex(i: Int) extends Variable
