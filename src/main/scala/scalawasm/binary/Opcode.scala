@@ -1,11 +1,10 @@
 package scalawasm.binary
 
 import scalawasm.ast
-import scalawasm.ast.Opcode._
-import scalawasm.ast.Opcode.Trait._
 import scalawasm.binary.LEB128.Type._
 
 object Opcode {
+  import scalawasm.ast.Opcode.Trait._
 
   def toBinary(o: ast.Opcode): Stream[Byte] = o match {
     case v: ControlFlow => toBinary(v)
@@ -52,6 +51,8 @@ object Opcode {
     Stream(op toByte) #::: varuint32(index).pack
   }
 }
+
+
 
   /*
 

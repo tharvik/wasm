@@ -1,6 +1,6 @@
 package scalawasm.binary
 
-import scalawasm.ast.Opcode.End
+import scalawasm.ast.BinaryOpcode.End
 import scalawasm.{ast => A}
 import scalawasm.{binary => B}
 import scalawasm.ast.{Section => AS}

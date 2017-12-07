@@ -1,14 +1,12 @@
 package scalawasm
 
-import scalawasm.ast.Trait.Term
-import scalawasm.ast.{Opcode, Preamble}
+import scalawasm.ast.{Opcode, Preamble, Tree}
 import scalawasm.{binary => B}
-import scalawasm.binary.LEB128.Type.{uint, uint32}
+import B.LEB128.Type.uint32
 
 
 package object binary {
-
-  def toBinary(t: Term): Stream[Byte] = t match {
+  def toBinary(t: Tree): Stream[Byte] = t match {
     case Preamble(sections) =>
       val magic: Stream[Byte] = Seq(0x00 toByte, 'a' toByte, 's' toByte, 'm' toByte).toStream
       val version = 1

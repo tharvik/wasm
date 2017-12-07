@@ -1,11 +1,10 @@
 package scalawasm.ast
 
-import scalawasm.ast.Trait.Term
 import scalawasm.ast.Type.Trait._
 
 object Type {
   object Trait {
-    sealed trait TypeConstructor extends Term
+    sealed trait TypeConstructor
     sealed trait Element
     sealed trait Block
     sealed trait Value extends Block
@@ -24,26 +23,16 @@ object Type {
   final case class Table(element_type: Element, limits: ResizableLimits)
   final case class Memory(limits: ResizableLimits)
 
-  sealed trait external_kind {
-    val kind: Int
-  }
+  sealed trait external_kind
   object external_kind {
-    final case object Function extends external_kind {
-      override val kind = 0
-    }
-    final case object Table extends external_kind {
-      override val kind = 1
-    }
-    final case object Memory extends external_kind {
-      override val kind = 2
-    }
-    final case object Global extends external_kind {
-      override val kind = 3
-    }
+    final case object Function extends external_kind
+    final case object Table extends external_kind
+    final case object Memory extends external_kind
+    final case object Global extends external_kind
   }
 
   final case class ResizableLimits(initial: Int, maximum: Option[Int] = None) {
     require(initial >= 0)
-    require(maximum.isEmpty || maximum.get >= 0)
+    require(maximum.exists(initial <= _))
   }
 }

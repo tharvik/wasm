@@ -1,27 +1,19 @@
 package scalawasm.ast
 
-import scalawasm.ast.Opcode.Trait._
+trait Opcode extends Tree {
+  sealed trait ControlFlow extends Opcode
+  sealed trait CallTrait extends Opcode // TODO ...Trait
+  sealed trait Parametric extends Opcode
+  sealed trait VariableTrait extends Opcode // TODO ...Trait
+  sealed trait Memory extends Opcode
+  sealed trait Constant extends Opcode
+  sealed trait Comparison extends Opcode
+  sealed trait Numeric extends Opcode
+  sealed trait Conversion extends Opcode
+  sealed trait Reinterpretation extends Opcode
 
-sealed trait Opcode
-object Opcode {
-  object Trait {
-    sealed trait ControlFlow extends Opcode
-    sealed trait Call extends Opcode
-    sealed trait Parametric extends Opcode
-    // TODO cross check index
-    sealed trait Variable extends Opcode {
-      def index: Int
-    }
-    sealed trait Memory extends Opcode
-    sealed trait Constant extends Opcode
-    sealed trait Comparison extends Opcode
-    sealed trait Numeric extends Opcode
-    sealed trait Conversion extends Opcode
-    sealed trait Reinterpretation extends Opcode
-
-    // TODO unable to have it private?
-    sealed trait MemoryImmediate extends Memory
-  }
+  // TODO unable to have it private?
+  sealed trait MemoryImmediate extends Memory
 
   final case object Unreachable extends ControlFlow
   final case object Nop extends ControlFlow
@@ -32,20 +24,19 @@ object Opcode {
   final case object End extends ControlFlow
   final case class Br(label: Variable) extends ControlFlow
   final case class BrIf(label: Variable) extends ControlFlow
-  final case class BrTable(lables: Seq[Variable]) extends ControlFlow
-  // TODO final case class BrTable(targets: Seq[Int], default: Int) extends ControlFlow
+  final case class BrTable(labels: Seq[Variable], default: Variable) extends ControlFlow
   final case object Return extends ControlFlow
 
   // TODO auto type_index
-  final case class Call(function_index: Int) extends Trait.Call
-  final case class CallIndirect(type_index: Int) extends Trait.Call
+  final case class Call(function: Variable) extends CallTrait
+  final case class CallIndirect(type_index: Variable) extends CallTrait
   final case object Drop extends Parametric
   final case object Select extends Parametric
-  final case class GetLocal(index: Int) extends Trait.Variable
-  final case class SetLocal(index: Int) extends Trait.Variable
-  final case class TeeLocal(index: Int) extends Trait.Variable
-  final case class GetGlobal(index: Int) extends Trait.Variable
-  final case class SetGlobal(index: Int) extends Trait.Variable
+  final case class GetLocal(index: Variable) extends VariableTrait
+  final case class SetLocal(index: Variable) extends VariableTrait
+  final case class TeeLocal(index: Variable) extends VariableTrait
+  final case class GetGlobal(index: Variable) extends VariableTrait
+  final case class SetGlobal(index: Variable) extends VariableTrait
 
   // TODO better than `flags`
   final case class memory_immediate(flags: Int, offset: Int)

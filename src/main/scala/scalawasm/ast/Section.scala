@@ -2,11 +2,22 @@ package scalawasm.ast
 
 import scalawasm.ast.{Type => AT}
 
-abstract class Section(val id: Short, val name: Option[String] = None) {
-  require((id == 0 && name.isDefined) || (id > 0 && name.isEmpty))
-}
-
+sealed trait Section
 object Section {
+  object Enum {
+    final case object Type extends Section
+    final case object Import extends Section
+    final case object Function extends Section
+    final case object Table extends Section
+    final case object Memory extends Section
+    final case object Global extends Section
+    final case object Export extends Section
+    final case object Start extends Section
+    final case object Element extends Section
+    final case object Code extends Section
+    final case object Data extends Section
+  }
+
   // TODO case class Custom(name: String) extends Section(0x00, Some(name))
   final case class Type(entries: Seq[AT.Function]) extends Section(1)
   final case class Import(entries: Seq[Content.import_entry]) extends Section(2)
@@ -32,7 +43,6 @@ object Section {
     final case class elem_segment(offset: init_expr, elems: Seq[Int])
     final case class function_body(locals: Seq[local_entry], code: Seq[Byte])
     final case class local_entry(count: Int, tpe: AT.Trait.Value)
-
 
     // FIXME temporary to document correctly
     sealed trait init_expr
