@@ -1,6 +1,5 @@
 package scalawasm.binary
 
-import scalawasm.ast.BinaryOpcode.End
 import scalawasm.{ast => A}
 import scalawasm.{binary => B}
 import scalawasm.ast.{Section => AS}
@@ -8,6 +7,7 @@ import scalawasm.binary.LEB128.Type._
 
 object Section {
 
+  /*
   def toBinary(s: A.Section): Stream[Byte] = {
     val namePacked: Array[Byte] = s.name map { _.getBytes("UTF-8") } getOrElse Array()
 
@@ -121,4 +121,5 @@ object Section {
     case e: AS.Content.import_entry_memory => B.Section.import_entry.toBinary(e)
     case e: AS.Content.import_entry_global => B.Section.import_entry.toBinary(e)
   }
+  */
 }

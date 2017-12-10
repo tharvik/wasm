@@ -32,7 +32,7 @@ class TextParser extends RegexParsers {
       TextOpcode.memory_immediate(a, o)
   }
 
-  def op: Parser[TextOpcode] =
+  /*def op: Parser[TextOpcode] =
     ( "unreachable" ^^^ TextOpcode.Unreachable
     | "nop" ^^^ TextOpcode.Nop
     | "br" ~> variable ^^ TextOpcode.Br
@@ -239,14 +239,14 @@ class TextParser extends RegexParsers {
   def memorySig: Parser[AT.Memory] =
     valueInt ~ opt(valueInt) ^^ { case min ~ max => AT.Memory(AT.ResizableLimits(min, max)) }
 
-  def expr: Parser[???] = "(" ~>
+  def expr: Parser[Expr] = "(" ~>
     ( op ~ rep(expr)
     | "block" ~> opt(name) ~ blockSig ~ rep(instr)
     | "loop" ~> opt(name) ~ blockSig ~ rep(instr)
     | "if" ~> opt(name) ~ blockSig ~ rep(expr) <~ "(" ~ "then" ~> rep(instr) <~ ")" ~> opt("(" ~ "else" ~> rep(instr) <~ ")")
     ) <~ ")"
 
-  def instr: Parser[???] = {
+  def instr: Parser[Instruction] = {
     def blockBased(id: String) = id ~>
       ( blockSig ~ rep(instr) ~ "end"
       | (name into { n => blockSig ~ rep(instr) <~ "end" ~ n })
@@ -258,9 +258,9 @@ class TextParser extends RegexParsers {
     | blockBased("loop")
     | blockBased("if")
     )
-  }
+  }*/
 
-  def func: Parser[???] = "(" ~ "func" ~>
+  /*def func: Parser[Function] = "(" ~ "func" ~>
     ( opt(name) ~ funcSig ~ rep(local) ~ rep(instr)
     | opt(name) <~ rep1("(" ~ "export" ~> string <~ ")") ~ funcSig ~ rep(local) ~ rep(instr)
     | opt(name) ~ ("(" ~ "import" ~> string ~ string <~ ")") ~ funcSig
@@ -335,5 +335,5 @@ class TextParser extends RegexParsers {
     )
   }
 
-  def run(text: String): TextTerm = TextParser.parse(TextParser.word(text))
+  def run(text: String): TextTerm = TextParser.parse(TextParser.word(text))*/
 }

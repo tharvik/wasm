@@ -6,6 +6,8 @@ package object ast {
   trait Tree {
     type Variable
   }
+
+  //case class Function
 }
 
 // TODO final case class init_expr()

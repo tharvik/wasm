@@ -4,7 +4,7 @@ import scalawasm.ast
 import scalawasm.binary.LEB128.Type._
 
 object Opcode {
-  import scalawasm.ast.Opcode.Trait._
+  /*import scalawasm.ast.Opcode.Trait._
 
   def toBinary(o: ast.Opcode): Stream[Byte] = o match {
     case v: ControlFlow => toBinary(v)
@@ -18,7 +18,7 @@ object Opcode {
       case Loop(sig) => Stream(0x03 toByte) #::: Type.Dispatcher.toBinary(sig)
       case If(sig) => Stream(0x04 toByte) #::: Type.Dispatcher.toBinary(sig)
       case Else => Stream(0x05)
-      case End => Stream(0x0b toByte)
+      case End => Stream(0x0b toByte)*/
       // TODO case Br(relative_depth: Int) => Stream(0x0c toByte) #::: varuint32(relative_depth).pack
       // TODO case BrIf(relative_depth: Int) => Stream(0x0d toByte) #::: varuint32(relative_depth).pack
       /* TODO case BrTable(targets: Seq[Int], default: Int) =>
@@ -26,8 +26,9 @@ object Opcode {
           varuint32(targets.size).pack #:::
           targets.flatMap {varuint32(_).pack}.toStream #:::
           varuint32(default).pack*/
-      case Return => Stream(0x0f toByte)
-    }
+      /*case Return => Stream(0x0f toByte)
+    }*/
+
   /*
   sealed trait Call extends Opcode
   sealed trait Parametric extends Opcode
@@ -40,7 +41,7 @@ object Opcode {
   sealed trait Reinterpretation extends Opcode
  */
 
-  def toBinary(v: Variable): Stream[Byte] = {
+  /*def toBinary(v: Variable): Stream[Byte] = {
     val (op, index) = v match {
       case GetLocal(i: Int) => (0x20, i)
       case SetLocal(i: Int) => (0x21, i)
@@ -49,7 +50,7 @@ object Opcode {
       case SetGlobal(i: Int) => (0x24, i)
     }
     Stream(op toByte) #::: varuint32(index).pack
-  }
+  }*/
 }
 
 

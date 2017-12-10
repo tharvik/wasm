@@ -1,16 +1,15 @@
-package scalawasm
+package scalawasm.binary
 
 import org.scalatest._
 
 import scala.io.Source.fromFile
 import scala.sys.process._
-import scalawasm.ast.Preamble
-import scalawasm.{binary => B}
+import scalawasm.ast.{Preamble, Type => AT}
 import scalawasm.binary.{Type => BT}
-import scalawasm.ast.{Type => AT}
+import scalawasm.{binary => B}
 
 class ToBinarySpec extends FlatSpec with Matchers {
-  "The empty module" should "be equals to the reference" in {
+  /*"The empty module" should "be equals to the reference" in {
     checkSameBinary(Preamble(Seq()), "(module)")
   }
 
@@ -33,7 +32,7 @@ class ToBinarySpec extends FlatSpec with Matchers {
     val ref = getReferenceBinary(text)
 
     own should be (ref)
-  }
+  }*/
 
   "types" should "correctly translate to binary" in {
     BT.toBinary(AT.i32) should be (Stream(0x7f toByte))

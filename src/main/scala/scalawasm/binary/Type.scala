@@ -44,8 +44,8 @@ object Type {
   def toBinary(m: Memory): Stream[Byte] =
     toBinary(m.limits)
 
-  def toBinary(e: external_kind): Stream[Byte] =
-    uint8(e.kind toByte).pack
+  /*def toBinary(e: external_kind): Stream[Byte] =
+    uint8(e.kind toByte).pack*/
 
   def toBinary(r: ResizableLimits): Stream[Byte] = {
     val flags: Short = if (r.maximum.isDefined) 1 else 0

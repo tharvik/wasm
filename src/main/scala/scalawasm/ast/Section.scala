@@ -19,22 +19,22 @@ object Section {
   }
 
   // TODO case class Custom(name: String) extends Section(0x00, Some(name))
-  final case class Type(entries: Seq[AT.Function]) extends Section(1)
-  final case class Import(entries: Seq[Content.import_entry]) extends Section(2)
-  final case class Function(indices: Seq[Int]) extends Section(3)
-  final case class Table(entries: Seq[AT.Table]) extends Section(4)
-  final case class Memory(entries: Seq[AT.Memory]) extends Section(5) {
+  final case class Type(entries: Seq[AT.Function]) extends Section
+  final case class Import(entries: Seq[Content.import_entry]) extends Section
+  final case class Function(indices: Seq[Int]) extends Section
+  final case class Table(entries: Seq[AT.Table]) extends Section
+  final case class Memory(entries: Seq[AT.Memory]) extends Section {
     require(entries.size <= 1)
   }
-  final case class Global(globals: Seq[Content.global_variable]) extends Section(6)
-  final case class Export(field: String, kind: AT.external_kind, index: Int) extends Section(7)
-  final case class Start(index: Int) extends Section(8)
-  final case class Element(entries: Seq[Content.elem_segment]) extends Section(9)
+  final case class Global(globals: Seq[Content.global_variable]) extends Section
+  final case class Export(field: String, kind: AT.external_kind, index: Int) extends Section
+  final case class Start(index: Int) extends Section
+  final case class Element(entries: Seq[Content.elem_segment]) extends Section
   // TODO "The count of function declared in the function section and function
   // bodies defined in this section must be the same and the ith declaration
   // corresponds to the ith function body"
-  final case class Code(bodies: Seq[Content.function_body]) extends Section(10)
-  final case class Data(entries: Seq[Content.data_segment]) extends Section(11)
+  final case class Code(bodies: Seq[Content.function_body]) extends Section
+  final case class Data(entries: Seq[Content.data_segment]) extends Section
 
   // TODO add "name" extra-section
 

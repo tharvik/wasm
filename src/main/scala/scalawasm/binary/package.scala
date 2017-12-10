@@ -6,8 +6,8 @@ import B.LEB128.Type.uint32
 
 
 package object binary {
-  def toBinary(t: Tree): Stream[Byte] = t match {
-    case Preamble(sections) =>
+  def toBinary(t: Tree): Stream[Byte] = uint32(0).pack /*t match {
+    /*case Preamble(sections) =>
       val magic: Stream[Byte] = Seq(0x00 toByte, 'a' toByte, 's' toByte, 'm' toByte).toStream
       val version = 1
 
@@ -15,8 +15,8 @@ package object binary {
         uint32(version).pack #:::
         (sections flatMap toBinary).toStream
     case t: Opcode =>
-      B.Opcode.toBinary(t)
-  }
+      B.Opcode.toBinary(t)*/
+  }*/
 }
 
   /*
