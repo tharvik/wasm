@@ -14,7 +14,10 @@ class PipelineTest extends FlatSpec with Matchers {
 
   coreTestFiles foreach { f =>
     registerTest(f.getName) {
-      Lexer(fromFile(f).mkString)
+      for {
+        tokens <- Lexer(fromFile(f).mkString).right
+        ast <- Parser(tokens).right
+      } yield ast
     }
   }
 }
