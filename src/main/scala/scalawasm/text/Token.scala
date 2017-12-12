@@ -1,6 +1,8 @@
 package scalawasm.text
 
-sealed trait Token
+import scala.util.parsing.input.Positional
+
+sealed trait Token extends Positional
 
 object Token {
   case object LBRACE extends Token
@@ -9,7 +11,6 @@ object Token {
   case object RPAREN extends Token
   case object DOT extends Token
   case object SLASH extends Token
-  case object UNDERSCORE extends Token
   case object EQUAL extends Token
 
   case class INTLIT(value: Long) extends Token
@@ -32,6 +33,7 @@ object Token {
   case object EQ extends Token
   case object EQZ extends Token
   case object EXTEND extends Token
+  case object DEMOTE extends Token
   case object GE extends Token
   case object GT extends Token
   case object LE extends Token
@@ -41,7 +43,8 @@ object Token {
   case object NEG extends Token
   case object OR extends Token
   case object POPCNT extends Token
-  case object REINTERPRETFLOAT extends Token
+  case object PROMOTE extends Token
+  case object REINTERPRET extends Token
   case object REM extends Token
   case object ROTL extends Token
   case object ROTR extends Token
@@ -51,6 +54,15 @@ object Token {
   case object TRUNC extends Token
   case object WRAP extends Token
   case object XOR extends Token
+
+  case object ABS extends Token
+  case object CEIL extends Token
+  case object FLOOR extends Token
+  case object NEAREST extends Token
+  case object SQRT extends Token
+  case object MIN extends Token
+  case object MAX extends Token
+  case object COPYSIGN extends Token
 
   case object SIGNED extends Token
   case object UNSIGNED extends Token

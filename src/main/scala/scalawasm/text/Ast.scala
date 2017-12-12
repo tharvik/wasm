@@ -1,23 +1,28 @@
 package scalawasm.text
 
-object Ast {
-  final case class Variable(id: Either[Long, String])
+import scala.util.parsing.input.Positional
 
-  sealed trait Value
+object Ast {
+  sealed trait BaseTrait extends Positional
+  final case class Variable(id: Either[Long, String]) extends BaseTrait
+
+  sealed trait Value extends BaseTrait
   object Value {
     final case class Integral(v: Long) extends Value
     final case class Floating(v: Double) extends Value
   }
 
-  sealed trait Sign
+  sealed trait Sign extends BaseTrait
   object Sign {
     final case object Signed extends Sign
     final case object Unsigned extends Sign
   }
 
-  sealed trait Type
+
+
+  sealed trait Type extends BaseTrait
   object Type {
-    sealed trait Element
+    sealed trait Element extends BaseTrait
     object Element {
       final case object AnyFunc extends Element
     }
@@ -28,14 +33,14 @@ object Ast {
   }
 
   object Signature {
-    final case class Block(results: Seq[Type])
-    final case class Function(type_ : Option[Variable], params: Seq[Parameter], results: Seq[Type])
-    final case class Global(mutable: Boolean, type_ : Type)
-    final case class Table(initial: Long, maximum: Option[Long], type_ : Type.Element)
-    final case class Memory(initial: Long, maximum: Option[Long])
+    final case class Block(results: Seq[Type]) extends BaseTrait
+    final case class Function(type_ : Option[Variable], params: Seq[Parameter], results: Seq[Type]) extends BaseTrait
+    final case class Global(mutable: Boolean, type_ : Type) extends BaseTrait
+    final case class Table(initial: Long, maximum: Option[Long], type_ : Type.Element) extends BaseTrait
+    final case class Memory(initial: Long, maximum: Option[Long]) extends BaseTrait
   }
 
-  sealed trait Expr
+  sealed trait Expr extends BaseTrait
   object Expr {
     final case class Block(name: Option[String], sig: Signature.Block, exprs: Seq[Expr]) extends Expr
     final case class Loop(name: Option[String], result: Seq[Type], exprs: Seq[Expr]) extends Expr
@@ -67,83 +72,77 @@ object Ast {
     final case class Const(tpe: Type, value: Value) extends Opcode
 
     // integer unary
-    final case object CountLeadingZeros extends Opcode
-    final case object CountTrailingZeros extends Opcode
-    final case object CountNumberOneBits extends Opcode
+    final case class CountLeadingZeros(type_ : Type) extends Opcode
+    final case class CountTrailingZeros(type_ : Type) extends Opcode
+    final case class CountNumberOneBits(type_ : Type) extends Opcode
 
     // integer binary
-    final case object Add extends Opcode
-    final case object Substract extends Opcode
-    final case object Multiply extends Opcode
+    final case class Add(type_ : Type) extends Opcode
+    final case class Substract(type_ : Type) extends Opcode
+    final case class Multiply(type_ : Type) extends Opcode
     // TODO Option[Sign] is for float where sign is meaningless
-    final case class Divide(sign: Option[Sign]) extends Opcode
-    final case class Remainder(sign: Sign) extends Opcode
-    final case object And extends Opcode
-    final case object Or extends Opcode
-    final case object Xor extends Opcode
-    final case object ShiftLeft extends Opcode
-    final case class ShiftRight(sign: Sign) extends Opcode
-    final case object RotateLeft extends Opcode
-    final case object RotateRight extends Opcode
+    final case class Divide(type_ : Type, sign: Option[Sign]) extends Opcode
+    final case class Remainder(type_ : Type, sign: Sign) extends Opcode
+    final case class And(type_ : Type) extends Opcode
+    final case class Or(type_ : Type) extends Opcode
+    final case class Xor(type_ : Type) extends Opcode
+    final case class ShiftLeft(type_ : Type) extends Opcode
+    final case class ShiftRight(type_ : Type, sign: Sign) extends Opcode
+    final case class RotateLeft(type_ : Type) extends Opcode
+    final case class RotateRight(type_ : Type) extends Opcode
 
     // integer test unary
-    final case object EqualZero extends Opcode
+    final case class EqualZero(type_ : Type) extends Opcode
 
     // integer test binary
-    final case object Equal extends Opcode
-    final case object NotEqual extends Opcode
+    final case class Equal(type_ : Type) extends Opcode
+    final case class NotEqual(type_ : Type) extends Opcode
     // TODO Option[Sign] is for float where sign is meaningless
-    final case class LessThan(sign: Option[Sign]) extends Opcode
-    final case class GreaterThan(sign: Option[Sign]) extends Opcode
-    final case class LessOrEqual(sign: Option[Sign]) extends Opcode
-    final case class GreaterOrEqual(sign: Option[Sign]) extends Opcode
-
-    // integer conv
-    final case object WrapFromInt64 extends Opcode
-    final case class ExtendFromInt32(sign: Sign) extends Opcode
-    final case class TruncateFromFloat32(sign: Sign) extends Opcode
-    final case class TruncateFromFloat64(sign: Sign) extends Opcode
-    final case object ReinterpretFromFloat32 extends Opcode
+    final case class LessThan(type_ : Type, sign: Option[Sign]) extends Opcode
+    final case class GreaterThan(type_ : Type, sign: Option[Sign]) extends Opcode
+    final case class LessOrEqual(type_ : Type, sign: Option[Sign]) extends Opcode
+    final case class GreaterOrEqual(type_ : Type, sign: Option[Sign]) extends Opcode
 
     // float unary
-    final case object Absolute extends Opcode
-    final case object Negative extends Opcode
-    final case object Ceiling extends Opcode
-    final case object Floor extends Opcode
-    final case object Truncate extends Opcode
-    final case object Nearest extends Opcode
-    final case object Sqrt extends Opcode
+    final case class Absolute(type_ : Type) extends Opcode
+    final case class Negative(type_ : Type) extends Opcode
+    final case class Ceiling(type_ : Type) extends Opcode
+    final case class Floor(type_ : Type) extends Opcode
+    final case class Nearest(type_ : Type) extends Opcode
+    final case class Sqrt(type_ : Type) extends Opcode
 
     // float binary
-    final case object Min extends Opcode
-    final case object Max extends Opcode
-    final case object CopySign extends Opcode
+    final case class Min(type_ : Type) extends Opcode
+    final case class Max(type_ : Type) extends Opcode
+    final case class CopySign(type_ : Type) extends Opcode
 
-    // float conv
-    final case class ConvertFromInt32(sign: Sign) extends Opcode
-    final case class ConvertFromInt64(sign: Sign) extends Opcode
-    final case object PromoteFromFloat32 extends Opcode
-    final case object ReinterpretFromInt64 extends Opcode
+    // conv
+    final case class Wrap(from: Type, to: Type) extends Opcode
+    final case class Extend(from: Type, to: Type, sign: Sign) extends Opcode
+    final case class Truncate(from: Type, to: Type, sign: Sign) extends Opcode
+    final case class Demote(from: Type, to: Type) extends Opcode
+    final case class Promote(from: Type, to: Type) extends Opcode
+    final case class Convert(from: Type, to: Type, sign: Sign) extends Opcode
+    final case class Reinterpret(from: Type, to: Type) extends Opcode
   }
 
-  final case class Parameter(name: Option[String], type_ : Type)
-  final case class Local(name: Option[String], type_ : Type)
-  final case class Function(name: Option[String], sig: Signature.Function, locals: Seq[Local], instrs: Seq[Expr])
+  final case class Parameter(name: Option[String], type_ : Type) extends BaseTrait
+  final case class Local(name: Option[String], type_ : Type) extends BaseTrait
+  final case class Function(name: Option[String], sig: Signature.Function, locals: Seq[Local], instrs: Seq[Expr]) extends BaseTrait
 
-  final case class Global(name: Option[String], sig: Signature.Global, instrs: Seq[Expr])
-  final case class Table(name: Option[String], sig: Signature.Table)
-  final case class Element(var_ : Option[Variable], offset: Seq[Expr], vars: Seq[Variable])
-  final case class Memory(name: Option[String], sig: Signature.Memory)
-  final case class Data(var_ : Option[Variable], offset: Seq[Expr], vars: Seq[String])
+  final case class Global(name: Option[String], sig: Signature.Global, instrs: Seq[Expr]) extends BaseTrait
+  final case class Table(name: Option[String], sig: Signature.Table) extends BaseTrait
+  final case class Element(var_ : Option[Variable], offset: Seq[Expr], vars: Seq[Variable]) extends BaseTrait
+  final case class Memory(name: Option[String], sig: Signature.Memory) extends BaseTrait
+  final case class Data(var_ : Option[Variable], offset: Seq[Expr], vars: Seq[String]) extends BaseTrait
 
-  final case class Start(var_ : Variable)
+  final case class Start(var_ : Variable) extends BaseTrait
 
-  final case class TypeDef(name: Option[String], sig: Signature.Function)
+  final case class TypeDef(name: Option[String], sig: Signature.Function) extends BaseTrait
 
-
-  final case class Import(module: String, field: String, kind: Import.Kind)
+  final case class Import(module: String, field: String, kind: Import.Kind) extends BaseTrait
   object Import {
-    sealed trait Kind
+    sealed trait Kind extends BaseTrait
     object Kind {
       final case class Function(name: Option[String], sig: Signature.Function) extends Kind
       final case class Table(name: Option[String], sig: Signature.Table) extends Kind
@@ -151,9 +150,9 @@ object Ast {
       final case class Global(name: Option[String], sig: Signature.Global) extends Kind
     }
   }
-  final case class Export(field: String, kind: Export.Kind)
+  final case class Export(field: String, kind: Export.Kind) extends BaseTrait
   object Export {
-    sealed trait Kind
+    sealed trait Kind extends BaseTrait
     object Kind {
       final case class Function(var_ : Variable) extends Kind
       final case class Table(var_ : Variable) extends Kind
@@ -164,5 +163,5 @@ object Ast {
 
   final case class Module(name: Option[String], typedefs: Seq[TypeDef], funcs: Seq[Function], imports: Seq[Import],
                           exports: Seq[Export], table: Option[Table], memory: Option[Memory], globals: Seq[Global],
-                          elements: Seq[Element], datas: Seq[Data], start: Option[Start])
+                          elements: Seq[Element], datas: Seq[Data], start: Option[Start]) extends BaseTrait
 }
