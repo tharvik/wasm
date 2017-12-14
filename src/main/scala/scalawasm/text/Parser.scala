@@ -1,10 +1,10 @@
 package scalawasm.text
 
 import scala.util.parsing.combinator.Parsers
-import scalawasm.text.Ast.{Opcode, _}
-import scalawasm.text.Ast.Opcode._
-import scalawasm.text.Token._
-
+import scalawasm.ast.Token
+import scalawasm.ast.Tree.Opcode._
+import scalawasm.ast.Tree._
+import scalawasm.ast.Token._
 
 object Parser extends Parsers {
   override type Elem = Token

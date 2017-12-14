@@ -1,11 +1,11 @@
-package scalawasm.text
+package scalawasm.ast
 
-object BinaryAst {
+object Binary {
   final case class Preamble(sections: Seq[Section])
 
   sealed trait Section
   object Section {
-    case class Type(types: Seq[BinaryAst.Signature.Function]) extends Section
+    case class Type(types: Seq[Binary.Signature.Function]) extends Section
   }
 
   object Signature {

@@ -1,4 +1,4 @@
-package scalawasm.text
+package scalawasm.ast
 
 import scala.util.parsing.input.Positional
 

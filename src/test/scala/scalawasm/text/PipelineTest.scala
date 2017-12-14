@@ -3,7 +3,7 @@ package scalawasm.text
 import org.scalatest._
 import java.io.File
 import scala.io.Source.fromFile
-import scalawasm.text.Main.pipe
+import scalawasm.Main.pipe
 
 class PipelineTest extends FlatSpec with Matchers {
   def coreTestFiles: Stream[File] = {

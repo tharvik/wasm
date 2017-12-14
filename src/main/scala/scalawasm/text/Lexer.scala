@@ -1,7 +1,8 @@
 package scalawasm.text
 
 import scala.util.parsing.combinator.RegexParsers
-import scalawasm.text.Token._
+import scalawasm.ast.Token
+import scalawasm.ast.Token._
 
 // https://enear.github.io/2016/03/31/parser-combinators/
 

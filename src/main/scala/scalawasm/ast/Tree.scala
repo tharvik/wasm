@@ -1,8 +1,8 @@
-package scalawasm.text
+package scalawasm.ast
 
 import scala.util.parsing.input.Positional
 
-object Ast {
+object Tree {
   sealed trait BaseTrait extends Positional
   final case class Variable(id: Either[Long, String]) extends BaseTrait
 

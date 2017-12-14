@@ -7,9 +7,7 @@ import org.scalatest._
 import scala.io.Source.fromFile
 import scala.sys.process._
 
-import scalawasm.ast.{Type => AT}
-import scalawasm.binary.{Type => BT}
-import scalawasm.text.Main.pipe
+import scalawasm.Main.pipe
 
 class ToBinarySpec extends FlatSpec with Matchers {
   private def getReferenceBinary(text: String): Stream[Byte] = {
@@ -35,20 +33,10 @@ class ToBinarySpec extends FlatSpec with Matchers {
   }
 
   "The trivial type module" should "be equals to the reference" in {
-    checkSameBinary("(module (type (func)))")
+    checkSameBinary("(module)")
   }
 
   "The Type module" should "be equals to the reference" in {
     checkSameBinary(readTestData("Types.wat"))
   }
-
-  "types" should "correctly translate to binary" in {
-    BT.toBinary(AT.i32) should be (Stream(0x7f toByte))
-    BT.toBinary(AT.i64) should be (Stream(0x7e toByte))
-    BT.toBinary(AT.f32) should be (Stream(0x7d toByte))
-    BT.toBinary(AT.f64) should be (Stream(0x7c toByte))
-    BT.toBinary(AT.anyfunc) should be (Stream(0x70 toByte))
-    BT.toBinary(AT.func) should be (Stream(0x60 toByte))
-  }
 }
-

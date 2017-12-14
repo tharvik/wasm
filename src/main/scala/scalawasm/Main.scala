@@ -1,9 +1,11 @@
-package scalawasm.text
+package scalawasm
 
 import java.io.File
 import java.nio.file._
 
 import scala.io.Source.fromFile
+import scalawasm.binary.{ToBinary, ToBinaryAst}
+import scalawasm.text._
 
 object Main extends App {
 

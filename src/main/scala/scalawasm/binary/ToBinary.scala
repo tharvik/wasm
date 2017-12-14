@@ -1,11 +1,8 @@
-package scalawasm.text
+package scalawasm.binary
 
+import scalawasm.ast.Binary.{Section => BSec, Signature => BSig, Type => BT}
+import scalawasm.ast.{Binary => B}
 import scalawasm.binary.LEB128.Type._
-
-import scalawasm.text.{BinaryAst => B}
-import scalawasm.text.BinaryAst.{Section => BSec}
-import scalawasm.text.BinaryAst.{Signature => BSig}
-import scalawasm.text.BinaryAst.{Type => BT}
 
 object ToBinary {
 
