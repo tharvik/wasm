@@ -71,14 +71,13 @@ object ToBinary {
           (entries flatMap { toBinary } toStream)*/
     }
 
-    val w = varuint32(payload.length).pack toList
-    val r = varint32(payload.length).pack toList
-    val p = payload toList
+    // TODO quirk spec#625
+    //val size = varuint32(payload.length).pack
+    val size = Stream(0x80 | payload.length, 0x80, 0x80, 0x80, 0x00) map { i => i.toByte }
 
     id.map { i =>
       varuint7(i toShort).pack #:::
-        varuint32(payload.length).pack #:::
-        payload
+        size #::: payload
     } getOrElse Stream.empty
   }
 

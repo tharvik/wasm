@@ -34,6 +34,10 @@ class ToBinarySpec extends FlatSpec with Matchers {
     checkSameBinary("(module)")
   }
 
+  "The trivial type module" should "be equals to the reference" in {
+    checkSameBinary("(module (type (func)))")
+  }
+
   "The Type module" should "be equals to the reference" in {
     checkSameBinary(readTestData("Types.wat"))
   }

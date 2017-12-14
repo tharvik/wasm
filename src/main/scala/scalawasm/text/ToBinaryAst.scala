@@ -34,17 +34,17 @@ object ToBinaryAst {
   //final case class Parameter(name: Option[String], type_ : Type) extends BaseTrait
 
   // None if no name defined as it can't be referenced
-  private def toFunction(t: A.TypeDef): Option[(BSig.Function, String)] =
-    t.name.map { (BSig.Function(
+  private def toFunction(t: A.TypeDef): (BSig.Function, Option[String]) =
+    (BSig.Function(
       t.sig.params.map(p => toValue(p.type_)),
       t.sig.results map toValue
-    ), _) }
+    ), t.name)
 
   private def getSectionType(types: Seq[A.TypeDef]): (BSec.Type, Context) = {
-    val funcsAndNames = types.map { t => toFunction(t) } filter { o => o.isDefined } map { o => o.get }
+    val funcsAndNames = types.map { t => toFunction(t) }
+    val names = funcsAndNames.filter { case (_, o) => o.isDefined } map { case (_, o) => o.get } toSet
 
-    (BSec.Type(funcsAndNames.map { case (f, _) => f }),
-     funcsAndNames.map { case (_, n) => n } toSet)
+    (BSec.Type(funcsAndNames.map { case (f, _) => f }), names)
   }
 
   private def getSections(m: A.Module): Seq[B.Section] = {
