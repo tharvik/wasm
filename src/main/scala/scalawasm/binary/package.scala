@@ -1,12 +1,10 @@
 package scalawasm
 
-import scalawasm.ast.{Opcode, Preamble, Tree}
 import scalawasm.{binary => B}
-import B.LEB128.Type.uint32
 
 
 package object binary {
-  def toBinary(t: Tree): Stream[Byte] = uint32(0).pack /*t match {
+  //def toBinary(t: Tree): Stream[Byte] = uint32(0).pack /*t match {
     /*case Preamble(sections) =>
       val magic: Stream[Byte] = Seq(0x00 toByte, 'a' toByte, 's' toByte, 'm' toByte).toStream
       val version = 1
@@ -16,7 +14,7 @@ package object binary {
         (sections flatMap toBinary).toStream
     case t: Opcode =>
       B.Opcode.toBinary(t)*/
-  }*/
+  //}*/
 }
 
   /*

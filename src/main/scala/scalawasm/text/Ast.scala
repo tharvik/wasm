@@ -18,8 +18,6 @@ object Ast {
     final case object Unsigned extends Sign
   }
 
-
-
   sealed trait Type extends BaseTrait
   object Type {
     sealed trait Element extends BaseTrait
@@ -34,7 +32,7 @@ object Ast {
 
   object Signature {
     final case class Block(results: Seq[Type]) extends BaseTrait
-    final case class Function(type_ : Option[Variable], params: Seq[Parameter], results: Seq[Type]) extends BaseTrait
+    final case class Function(params: Seq[Parameter], results: Seq[Type]) extends BaseTrait
     final case class Global(mutable: Boolean, type_ : Type) extends BaseTrait
     final case class Table(initial: Long, maximum: Option[Long], type_ : Type.Element) extends BaseTrait
     final case class Memory(initial: Long, maximum: Option[Long]) extends BaseTrait
@@ -128,7 +126,7 @@ object Ast {
 
   final case class Parameter(name: Option[String], type_ : Type) extends BaseTrait
   final case class Local(name: Option[String], type_ : Type) extends BaseTrait
-  final case class Function(name: Option[String], sig: Signature.Function, locals: Seq[Local], instrs: Seq[Expr]) extends BaseTrait
+  final case class Function(name: Option[String], typeref: Option[Variable], sig: Signature.Function, locals: Seq[Local], instrs: Seq[Expr]) extends BaseTrait
 
   final case class Global(name: Option[String], sig: Signature.Global, instrs: Seq[Expr]) extends BaseTrait
   final case class Table(name: Option[String], sig: Signature.Table) extends BaseTrait
@@ -144,7 +142,7 @@ object Ast {
   object Import {
     sealed trait Kind extends BaseTrait
     object Kind {
-      final case class Function(name: Option[String], sig: Signature.Function) extends Kind
+      final case class Function(name: Option[String], typeref: Option[Variable], sig: Signature.Function) extends Kind
       final case class Table(name: Option[String], sig: Signature.Table) extends Kind
       final case class Memory(name: Option[String], sig: Signature.Memory) extends Kind
       final case class Global(name: Option[String], sig: Signature.Global) extends Kind

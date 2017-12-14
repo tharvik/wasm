@@ -1,7 +1,8 @@
 package scalawasm.ast
 
-trait Opcode extends Tree {
-  sealed trait ControlFlow extends Opcode
+trait Opcode
+object Opcode {
+  /*sealed trait ControlFlow extends Opcode
   sealed trait CallTrait extends Opcode // TODO ...Trait
   sealed trait Parametric extends Opcode
   sealed trait VariableTrait extends Opcode // TODO ...Trait
@@ -224,5 +225,5 @@ trait Opcode extends Tree {
   }
 
   final case object CurrentMemory extends Memory
-  final case object GrowMemory extends Memory
+  final case object GrowMemory extends Memory*/
 }

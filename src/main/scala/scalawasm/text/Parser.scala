@@ -83,8 +83,10 @@ object Parser extends Parsers {
 
   private def block_sig: Parser[Signature.Block] = positioned { rep(LPAREN ~ RESULT ~> rep(type_) <~ RPAREN) ^^ {
     types => Signature.Block(types.flatten) } }
-  private def func_sig: Parser[Signature.Function] = positioned { opt(LPAREN ~ TYPE ~> var_ <~ RPAREN) ~ rep(param) ~ rep(result) ^^ {
-    case t ~ params ~ results => Signature.Function(t, params.flatten, results.flatten) } }
+  // type_ : Option[Variable]
+  private def typeref: Parser[Variable] = LPAREN ~ TYPE ~> var_ <~ RPAREN
+  private def func_sig: Parser[Signature.Function] = positioned { rep(param) ~ rep(result) ^^ {
+    case params ~ results => Signature.Function(params.flatten, results.flatten) } }
   private def global_sig: Parser[Signature.Global] = positioned {
     ( type_ ^^ { t => Signature.Global(mutable = false, t) }
     | LPAREN ~ MUT ~> type_ <~ RPAREN ^^ { t => Signature.Global(mutable = true, t) } ) }
@@ -149,8 +151,8 @@ object Parser extends Parsers {
       | cvtop ~ (SLASH ~> type_) ^^ { case op ~ to => op(t, to) } )
     } ) }
 
-  private def func: Parser[Function] = positioned { LPAREN ~ FUNC ~> opt(name) ~ func_sig ~ rep(local) ~ rep(instr) <~ RPAREN ^^ {
-    case n ~ sig ~ locals ~ instrs => Function(n, sig, locals.flatten, instrs) } }
+  private def func: Parser[Function] = positioned { LPAREN ~ FUNC ~> opt(name) ~ opt(typeref) ~ func_sig ~ rep(local) ~ rep(instr) <~ RPAREN ^^ {
+    case n ~ t ~ sig ~ locals ~ instrs => Function(n, t, sig, locals.flatten, instrs) } }
   private def param: Parser[Seq[Parameter]] = LPAREN ~ PARAM ~>
     ( rep(type_) ^^ { types => types.map(t => Parameter(None, t)) }
     | name ~ type_ ^^ { case n ~ t => Seq(Parameter(Some(n), t)) }
@@ -182,7 +184,7 @@ object Parser extends Parsers {
   private def import_ : Parser[Import] = positioned { LPAREN ~ IMPORT ~> string ~ string ~ imkind <~ RPAREN ^^ {
     case m ~ f ~ k => Import(m, f, k) } }
   private def imkind: Parser[Import.Kind] = positioned { LPAREN ~>
-    ( FUNC ~> opt(name) ~ func_sig ^^ { case n ~ sig => Import.Kind.Function(n, sig)}
+    ( FUNC ~> opt(name) ~ opt(typeref) ~ func_sig ^^ { case n ~ t ~ sig => Import.Kind.Function(n, t, sig)}
     | GLOBAL ~> opt(name) ~ global_sig ^^ { case n ~ sig => Import.Kind.Global(n, sig)}
     | TABLE ~> opt(name) ~ table_sig ^^ { case n ~ sig => Import.Kind.Table(n, sig)}
     | MEMORY ~> opt(name) ~ memory_sig ^^ { case n ~ sig => Import.Kind.Memory(n, sig)}
@@ -203,7 +205,7 @@ object Parser extends Parsers {
   def apply(tokens: Seq[Token]): Either[ParsingError, Module] = {
     val reader = new TokenReader(tokens)
     module(reader) match {
-      //case NoSuccess(msg, next) => Left(ParsingError(msg, next.pos))
+      case NoSuccess(msg, next) => Left(ParsingError(msg, next.pos))
       case Success(result, _) => Right(result)
     }
   }

@@ -1,38 +1,42 @@
 package scalawasm.binary
 
+import java.nio.file.{Files, Paths}
+
 import org.scalatest._
 
 import scala.io.Source.fromFile
 import scala.sys.process._
-import scalawasm.ast.{Preamble, Type => AT}
+
+import scalawasm.ast.{Type => AT}
 import scalawasm.binary.{Type => BT}
-import scalawasm.{binary => B}
+import scalawasm.text.Main.pipe
 
 class ToBinarySpec extends FlatSpec with Matchers {
-  /*"The empty module" should "be equals to the reference" in {
-    checkSameBinary(Preamble(Seq()), "(module)")
-  }
-
-  def getReferenceBinary(text: String): Stream[Byte] = {
+  private def getReferenceBinary(text: String): Stream[Byte] = {
     val f = java.io.File.createTempFile("test", ".wasm")
     val cmd = Seq("wasm", "-e", text, "-o", f.getAbsolutePath)
 
     cmd.!!
 
-    fromFile(f).buffered map(_.toByte) toStream
+    Files.readAllBytes(Paths get f.getAbsolutePath) toStream
   }
 
-  // TODO
-  //    code -> wat -> ./wasm -> wasm
-  //    code -> wasm
-  //def checkSameBinary(code: Preamble)
-
-  def checkSameBinary(code: Preamble, text: String) = {
-    val own = B.toBinary(code)
+  private def checkSameBinary(text: String) = {
+    val own = pipe(text).asInstanceOf[Right[String, Stream[Byte]]].value
     val ref = getReferenceBinary(text)
 
     own should be (ref)
-  }*/
+  }
+
+  private def readTestData(filename: String): String = fromFile(s"test-data/$filename").mkString
+
+  "The empty module" should "be equals to the reference" in {
+    checkSameBinary("(module)")
+  }
+
+  "The Type module" should "be equals to the reference" in {
+    checkSameBinary(readTestData("Types.wat"))
+  }
 
   "types" should "correctly translate to binary" in {
     BT.toBinary(AT.i32) should be (Stream(0x7f toByte))
@@ -41,9 +45,6 @@ class ToBinarySpec extends FlatSpec with Matchers {
     BT.toBinary(AT.f64) should be (Stream(0x7c toByte))
     BT.toBinary(AT.anyfunc) should be (Stream(0x70 toByte))
     BT.toBinary(AT.func) should be (Stream(0x60 toByte))
-  }
-
-  "inline-module.wast" should "correctly translate to binary" in {
   }
 }
 

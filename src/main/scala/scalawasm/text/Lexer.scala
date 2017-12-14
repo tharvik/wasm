@@ -156,7 +156,7 @@ object Lexer extends RegexParsers {
 
   def apply(code: String): Either[ParsingError, List[Token]] =
     parse(tokens, code) match {
-      //case NoSuccess(msg, next) => Left(ParsingError(msg, next.pos))
+      case NoSuccess(msg, next) => Left(ParsingError(msg, next.pos))
       case Success(result, _) => Right(result)
     }
 }

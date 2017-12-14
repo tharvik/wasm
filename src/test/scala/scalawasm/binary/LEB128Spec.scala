@@ -33,5 +33,9 @@ class LEB128Spec extends FlatSpec with Matchers {
     pipeS(624485) should be (624485)
     pipeS(-624485) should be (-624485)
   }
+
+  "signed(1)" should "be one byte" in {
+    Signed.pack(32, 1) should be (byteStream(0x01))
+  }
 }
 

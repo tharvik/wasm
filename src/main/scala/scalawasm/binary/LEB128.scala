@@ -7,8 +7,8 @@ object LEB128 {
 
   private def splitAndExtend(size: Int, value: Long): Seq[Byte] = {
     0 until numberOfBytes(size) map { i =>
-      (value >> (i * 7)) toByte
-    } reverse
+      (value >> (i * 7) & 0x7F) toByte
+    } takeWhile { _ != 0 } reverse
   }
 
   object Signed {
@@ -38,9 +38,10 @@ object LEB128 {
   object Unsigned {
     def pack(size: Int, value: Long): Seq[Byte] = {
       val bytes = splitAndExtend(size, value)
+      val seq = if (bytes.nonEmpty) bytes else Seq(0x00 toByte)
 
-      (bytes.head +:
-        (bytes.tail map {
+      (seq.head +:
+        (seq.tail map {
           _ | 0x80 toByte
         })) reverse
     }

@@ -7,7 +7,7 @@ import scalawasm.{ast => A}
 class TextParser extends RegexParsers {
   //lexical.delimiters ++= List("(", ")")
   //lexical.reserved ++= List("")
-
+  /*
   // TODO check for truncation
   def valueInt: Parser[Int] = """[0-9]+""".r ^^ { _.toInt }
   def valueLong: Parser[Long] = """[0-9]+""".r ^^ { _.toLong }
@@ -16,12 +16,12 @@ class TextParser extends RegexParsers {
   def variable: Parser[TextTree.Variable] =
     ( """[0-9]+""".r ^^ { s => Left(s.toInt) }
     | name ^^ { s => Right(s) }
-    )
+    )*/
   def name: Parser[String] = """\$[a-zA-Z0-9_\.+-*/\\^~=<>!?@#$%&|:'`]+""".r
   def string: Parser[String] = """"([a-zA-Z]|\\([nt\\'"]|[0-9a-fA-F]{2}|u{[0-9a-fA-F]+}))*"""".r
 
   // --
-  def elemType: Parser[A.Type.Trait.Element] = "anyfunc" ^^^ A.Type.anyfunc
+  /*def elemType: Parser[A.Type.Trait.Element] = "anyfunc" ^^^ A.Type.anyfunc
 
   def offset: Parser[Int] = "offset=" ~> valueInt
   def align: Parser[Int] = "align=" ~> valueInt  // TODO only power of two
@@ -30,7 +30,7 @@ class TextParser extends RegexParsers {
       val o = offset getOrElse 0
       val a = align.map { i: Int => math.log(i) / math.log(2) }.map { _.toInt } getOrElse 0
       TextOpcode.memory_immediate(a, o)
-  }
+  }*/
 
   /*def op: Parser[TextOpcode] =
     ( "unreachable" ^^^ TextOpcode.Unreachable

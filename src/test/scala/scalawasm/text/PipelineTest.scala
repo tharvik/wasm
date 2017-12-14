@@ -3,6 +3,7 @@ package scalawasm.text
 import org.scalatest._
 import java.io.File
 import scala.io.Source.fromFile
+import scalawasm.text.Main.pipe
 
 class PipelineTest extends FlatSpec with Matchers {
   def coreTestFiles: Stream[File] = {
@@ -17,10 +18,7 @@ class PipelineTest extends FlatSpec with Matchers {
 
   coreTestFiles foreach { f =>
     registerTest(f.getName) {
-      (for {
-        tokens <- Lexer(fromFile(f).mkString).right
-        ast <- Parser(tokens).right
-      } yield ast) should be (right)
+      pipe(fromFile(f).mkString) should be (right)
     }
   }
 }
