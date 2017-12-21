@@ -68,6 +68,7 @@ object LEB128 {
     def uint32(value: Int): uint = uint(32, value)
     def uint64(value: Long): uint = uint(64, value)
 
+    // TODO not in LEB128
     case class uint(numberOfBits: Int, value: Long) {
       val pack: Stream[Byte] =
         0 until (numberOfBits / 8) map {

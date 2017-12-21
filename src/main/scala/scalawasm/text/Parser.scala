@@ -5,6 +5,7 @@ import scalawasm.ast.Token
 import scalawasm.ast.Tree.Opcode._
 import scalawasm.ast.Tree._
 import scalawasm.ast.Token._
+import scalawasm.Config.enableSpecCompat
 
 object Parser extends Parsers {
   override type Elem = Token
@@ -28,12 +29,12 @@ object Parser extends Parsers {
   private def name: Parser[String] = accept("name", { case NAME(n) => n })
   private def string: Parser[String] = accept("string", { case STRINGLIT(s) => s })
 
-  private def type_ : Parser[Type] = positioned {
+  private def value_type : Parser[Type.Value] = positioned {
     ( I32 ^^^ Type.i32
     | I64 ^^^ Type.i64
     | F32 ^^^ Type.f32
     | F64 ^^^ Type.f64 ) }
-  private def elem_type = positioned { ANYFUNC ^^^ Type.Element.AnyFunc }
+  private def elem_type = positioned { ANYFUNC ^^^ Type.AnyFunc }
 
   private def unop: Parser[Type => Opcode] =
   ( CTZ ^^^ CountTrailingZeros
@@ -72,28 +73,29 @@ object Parser extends Parsers {
   private def offset: Parser[Long] = OFFSET ~ EQUAL ~> int
   // TODO ensure power of two
   private def align: Parser[Long] = ALIGN ~ EQUAL ~> int
-  private def cvtop: Parser[(Type, Type) => Opcode] =
+  private def cvtop: Parser[(Type.Value, Type.Value) => Opcode] =
   ( WRAP ^^^ Wrap
-  | EXTEND ~> sign ^^ { s => { (from: Type, to: Type) => Extend(from, to, s) } }
-  | TRUNC ~> sign ^^ { s => { (from: Type, to: Type) => Truncate(from, to, s) } }
+  | EXTEND ~> sign ^^ { s => { (from: Type.Value, to: Type.Value) => Extend(from, to, s) } }
+  | TRUNC ~> sign ^^ { s => { (from: Type.Value, to: Type.Value) => Truncate(from, to, s) } }
   | DEMOTE ^^^ Demote
   | PROMOTE ^^^ Promote
-  | CONVERT ~> sign ^^ { s => { (from: Type, to: Type) => Convert(from, to, s) } }
+  | CONVERT ~> sign ^^ { s => { (from: Type.Value, to: Type.Value) => Convert(from, to, s) } }
   | REINTERPRET ^^^ Reinterpret )
 
-  private def block_sig: Parser[Signature.Block] = positioned { rep(LPAREN ~ RESULT ~> rep(type_) <~ RPAREN) ^^ {
+  private def block_sig: Parser[Signature.Block] = positioned { rep(LPAREN ~ RESULT ~> rep(value_type) <~ RPAREN) ^^ {
     types => Signature.Block(types.flatten) } }
-  // type_ : Option[Variable]
-  private def typeref: Parser[Variable] = LPAREN ~ TYPE ~> var_ <~ RPAREN
-  private def func_sig: Parser[Signature.Function] = positioned { rep(param) ~ rep(result) ^^ {
+  // TODO add Config.enableSpecCompat
+  private def func_sig_without_type = positioned { rep(param) ~ rep(result) ^^ {
     case params ~ results => Signature.Function(params.flatten, results.flatten) } }
+  private def typeref = LPAREN ~ TYPE ~> var_ <~ RPAREN
+  private def func_sig = opt(typeref) ~ func_sig_without_type
   private def global_sig: Parser[Signature.Global] = positioned {
-    ( type_ ^^ { t => Signature.Global(mutable = false, t) }
-    | LPAREN ~ MUT ~> type_ <~ RPAREN ^^ { t => Signature.Global(mutable = true, t) } ) }
+    ( value_type ^^ { t => Signature.Global(mutable = false, t) }
+    | LPAREN ~ MUT ~> value_type <~ RPAREN ^^ { t => Signature.Global(mutable = true, t) } ) }
   private def table_sig: Parser[Signature.Table] = positioned { nat ~ opt(nat) ~ elem_type ^^ {
-    case i ~ m ~ t => Signature.Table(i, m, t) } }
+    case i ~ m ~ t => Signature.Table(ResizableLimits(i toInt, m.map(_.toInt)), t) } } // TODO remove toInt
   private def memory_sig: Parser[Signature.Memory] = positioned { nat ~ opt(nat) ^^ {
-    case i ~ m => Signature.Memory(i, m) } }
+    case i ~ m => Signature.Memory(ResizableLimits(i toInt, m.map(_.toInt))) } } // TODO remove toInt
 
   private def ifThen: Parser[List[Expr]] = LPAREN ~ THEN ~> rep(instr) <~ RPAREN
   private def ifElse: Parser[List[Expr]] = LPAREN ~ ELSE ~> rep(instr) <~ RPAREN
@@ -137,30 +139,30 @@ object Parser extends Parsers {
     | TEE_LOCAL ~> var_ ^^ { v => Opcode.TeeLocal(v) }
     | GET_GLOBAL ~> var_ ^^ { v => Opcode.GetLocal(v) }
     | SET_GLOBAL ~> var_ ^^ { v => Opcode.SetLocal(v) }
-    | type_ ~ DOT ~ loadSizeAndSign ~ opt(offset) ~ opt(align) ^^ {
+    | value_type ~ DOT ~ loadSizeAndSign ~ opt(offset) ~ opt(align) ^^ {
       case t ~ _ ~ sizeAndSign ~ off ~ ali => Opcode.Load(t, sizeAndSign, off.getOrElse(0), ali.getOrElse(0)) }
-    | type_ ~ DOT ~ storeSize ~ opt(offset) ~ opt(align) ^^ {
+    | value_type ~ DOT ~ storeSize ~ opt(offset) ~ opt(align) ^^ {
       case t ~ _ ~ size ~ off ~ ali => Opcode.Store(t, size, off.getOrElse(0), ali.getOrElse(0)) }
     | CURRENT_MEMORY ^^^ Opcode.CurrentMemory
     | GROW_MEMORY ^^^ Opcode.GrowMemory
-    | type_ >> { t => DOT ~>
+    | value_type >> { t => DOT ~>
       ( CONST ~> value ^^ { v => Opcode.Const(t, v) }
       | unop ^^ { op => op(t) }
       | binop ^^ { op => op(t) }
       | relop ^^ { op => op(t) }
-      | cvtop ~ (SLASH ~> type_) ^^ { case op ~ to => op(t, to) } )
+      | cvtop ~ (SLASH ~> value_type) ^^ { case op ~ to => op(t, to) } )
     } ) }
 
-  private def func: Parser[Function] = positioned { LPAREN ~ FUNC ~> opt(name) ~ opt(typeref) ~ func_sig ~ rep(local) ~ rep(instr) <~ RPAREN ^^ {
-    case n ~ t ~ sig ~ locals ~ instrs => Function(n, t, sig, locals.flatten, instrs) } }
+  private def func: Parser[Function] = positioned { LPAREN ~ FUNC ~> opt(name) ~ func_sig ~ rep(local) ~ rep(instr) <~ RPAREN ^^ {
+    case n ~ (t ~ sig) ~ locals ~ instrs => Function(n, t, sig, locals.flatten, instrs) } }
   private def param: Parser[Seq[Parameter]] = LPAREN ~ PARAM ~>
-    ( rep(type_) ^^ { types => types.map(t => Parameter(None, t)) }
-    | name ~ type_ ^^ { case n ~ t => Seq(Parameter(Some(n), t)) }
+    ( name ~ value_type ^^ { case n ~ t => Seq(Parameter(Some(n), t)) }
+    | rep(value_type) ^^ { types => types.map(t => Parameter(None, t)) }
     ) <~ RPAREN
-  private def result: Parser[Seq[Type]] = LPAREN ~ RESULT ~> rep(type_) <~ RPAREN
+  private def result: Parser[Seq[Type.Value]] = LPAREN ~ RESULT ~> rep(value_type) <~ RPAREN
   private def local: Parser[Seq[Local]] = LPAREN ~ LOCAL ~>
-    ( rep(type_) ^^ { types => types.map(t => Local(None, t)) }
-    | name ~ type_ ^^ { case n ~ t => Seq(Local(Some(n), t)) }
+    ( name ~ value_type ^^ { case n ~ t => Seq(Local(Some(n), t)) }
+    | rep(value_type) ^^ { types => types.map(t => Local(None, t)) }
     ) <~ RPAREN
 
   private def global: Parser[Global] = positioned { LPAREN ~ GLOBAL ~> opt(name) ~ global_sig ~ rep(instr) <~ RPAREN ^^ {
@@ -178,13 +180,13 @@ object Parser extends Parsers {
 
   private def start: Parser[Start] = positioned { LPAREN ~ START ~> var_ <~ RPAREN ^^ Start }
 
-  private def typedef: Parser[TypeDef] = positioned { LPAREN ~ TYPE ~> opt(name) ~ (LPAREN ~ FUNC ~> func_sig <~ RPAREN ~ RPAREN) ^^ {
+  private def typedef: Parser[TypeDef] = positioned { LPAREN ~ TYPE ~> opt(name) ~ (LPAREN ~ FUNC ~> func_sig_without_type <~ RPAREN ~ RPAREN) ^^ {
     case n ~ sig => TypeDef(n, sig) } }
 
   private def import_ : Parser[Import] = positioned { LPAREN ~ IMPORT ~> string ~ string ~ imkind <~ RPAREN ^^ {
     case m ~ f ~ k => Import(m, f, k) } }
   private def imkind: Parser[Import.Kind] = positioned { LPAREN ~>
-    ( FUNC ~> opt(name) ~ opt(typeref) ~ func_sig ^^ { case n ~ t ~ sig => Import.Kind.Function(n, t, sig)}
+    ( FUNC ~> opt(name) ~ func_sig ^^ { case n ~ (t ~ sig) => Import.Kind.Function(n, t, sig)}
     | GLOBAL ~> opt(name) ~ global_sig ^^ { case n ~ sig => Import.Kind.Global(n, sig)}
     | TABLE ~> opt(name) ~ table_sig ^^ { case n ~ sig => Import.Kind.Table(n, sig)}
     | MEMORY ~> opt(name) ~ memory_sig ^^ { case n ~ sig => Import.Kind.Memory(n, sig)}
@@ -198,13 +200,21 @@ object Parser extends Parsers {
     | MEMORY ~> var_ ^^ Export.Kind.Memory
     ) <~ RPAREN }
 
-  private def module: Parser[Module] = positioned { LPAREN ~ MODULE ~> opt(name) ~ rep(typedef) ~ rep(func) ~ rep(import_) ~
-    rep(export) ~ opt(table) ~ opt(memory) ~ rep(global) ~ rep(elem) ~ rep(data) ~ opt(start) <~ RPAREN ^^ {
-    case n ~ td ~ f ~ im ~ ex ~ t ~ m ~ g ~ e ~ d ~ s => Module(n, td, f, im, ex, t, m, g, e, d, s) } }
+  private def moduleSpecCompat: Parser[Module] = positioned { LPAREN ~ MODULE ~> (
+    opt(name) ~ rep(typedef) ~ (rep(import_) ~ rep(func)) ~ rep(export) ~ opt(table) ~ opt(memory) ~ rep(global) ~
+      rep(elem) ~ rep(data) ~ opt(start) ^^ {
+      case n ~ td ~ (im ~ f) ~ ex ~ t ~ m ~ g ~ e ~ d ~ s => Module(n, td, f, im, ex, t, m, g, e, d, s) }
+    ) <~ RPAREN }
+  private def module: Parser[Module] = positioned { LPAREN ~ MODULE ~> (
+    opt(name) ~ rep(typedef) ~ (rep(func) ~ rep(import_)) ~ rep(export) ~ opt(table) ~ opt(memory) ~ rep(global) ~
+      rep(elem) ~ rep(data) ~ opt(start) ^^ {
+      case n ~ td ~ (f ~ im) ~ ex ~ t ~ m ~ g ~ e ~ d ~ s => Module(n, td, f, im, ex, t, m, g, e, d, s) }
+    ) <~ RPAREN }
 
   def apply(tokens: Seq[Token]): Either[ParsingError, Module] = {
     val reader = new TokenReader(tokens)
-    module(reader) match {
+    val parser: Parser[Module] = if (enableSpecCompat) moduleSpecCompat else module
+    parser(reader) match {
       case NoSuccess(msg, next) => Left(ParsingError(msg, next.pos))
       case Success(result, _) => Right(result)
     }

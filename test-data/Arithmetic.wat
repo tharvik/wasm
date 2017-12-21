@@ -1,4 +1,10 @@
 (module 
+  (import "spectest" "print" (func $Std_printInt (param i32) (result i32)))
+  (import "spectest" "print" (func $Std_printString (param i32) (result i32)))
+  (import "spectest" "print" (func $js_readString0 (param i32) (result i32)))
+  (import "spectest" "print" (func $Std_readInt (result i32)))
+  (import "spectest" "memory" (memory 1 2))
+
   (func $String_concat (param i32 i32) (result i32) (local i32 i32)
     (get_global 0)
     (set_local 3)
@@ -359,11 +365,6 @@
     (drop)
   )
 
-  (import "system" "printInt" (func $Std_printInt (param i32) (result i32)))
-  (import "system" "printString" (func $Std_printString (param i32) (result i32)))
-  (import "system" "readString0" (func $js_readString0 (param i32) (result i32)))
-  (import "system" "readInt" (func $Std_readInt (result i32)))
-  (import "system" "mem" (memory 100))
   (export "Arithmetic_main" (func $Arithmetic_main))
   (global (mut i32) (i32.const 0))
 )

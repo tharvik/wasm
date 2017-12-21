@@ -11,7 +11,7 @@ object Lexer extends RegexParsers {
   // TODO handle multi lines comments
   override val whiteSpace = "([ \n\t\r\f]|;;.*\n)+".r
 
-  // TODO check "1e9" is valid, never definied exactly but seems valid
+  // TODO int/float lexer is to redo
   private def intlit = positioned {
     ( """[0-9]+""".r ^^ { s => INTLIT(java.lang.Long.parseUnsignedLong(s)) }
     | """-[0-9]+""".r ^^ { s => INTLIT(s.toLong) })
