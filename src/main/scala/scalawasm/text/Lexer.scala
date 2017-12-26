@@ -20,7 +20,7 @@ object Lexer extends RegexParsers {
   private def floatlit = positioned { """-?[0-9]+[\.e][0-9]+""".r ^^ { s => FLOATLIT(s.toDouble) } }
   private def name = positioned { """\$[a-zA-Z0-9_\.+-\\*/\\^~=<>!?@#$%&|:'`]+""".r ^^ { s => NAME(s) } }
   // TODO "\x" string to actual char
-  private def stringlit = positioned { """"([ -!#-\[\]-~])*"""".r ^^ { s => STRINGLIT(s)} }
+  private def stringlit = positioned { "\"" ~> ("""([ -!#-\[\]-~])*""".r ^^ { s: String => STRINGLIT(s) }) <~ "\"" }
 
   private def lbrace = positioned { "{" ^^^ LBRACE }
   private def rbrace = positioned { "}" ^^^ RBRACE }

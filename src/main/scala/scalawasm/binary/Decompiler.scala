@@ -11,7 +11,7 @@ object Decompiler {
   private def out(v: SB, msg: String): Unit = {
     val hex = v.map(b => f"$b%02x").mkString(" ")
 
-    println(f"$hex%20s\t$msg")
+    println(f"$hex%30s\t$msg")
   }
 
   private def out(msg: String): Unit = println((" " * 20) + s"\t$msg")
@@ -29,7 +29,7 @@ object Decompiler {
 
 
     def VarU(s: SB)(op: Op[Long]): SB = Var[Long](U.unpack)(s)(op)
-    def VarS(s: SB)(op: Op[Double]): SB = Var[Double](S.unpack)(s)(op)
+    def VarS(s: SB)(op: Op[Long]): SB = Var[Long](S.unpack)(s)(op)
     def Uint(s: SB, numberOfBytes: Int)(op: Op[Long]): SB = Bytes(s, numberOfBytes) { (log, bytes, tail) =>
       val v: Long = bytes.zipWithIndex.map { case (b: Byte, i: Int) => b.toLong << (i * 8) }.reduce { _|_ }
       op(log, v, tail)
@@ -38,6 +38,9 @@ object Decompiler {
       val (bytes, tail) = s.splitAt(numberOfBytes)
 
       op({ m: String => out(bytes, m) }, bytes, tail)
+    }
+    def Byte(s: SB)(op: Op[Byte]): SB = Read.Bytes(s, 1) { (log, bytes, tail) =>
+      op(log, bytes.head, tail)
     }
 
     private def loop(count: Long, s: SB, op: SB => SB): SB = count match {
@@ -52,7 +55,7 @@ object Decompiler {
 
     def WithBytesLength(s: SB, id: String)(op: Op[Seq[Byte]]): SB =
       Read.VarU(s) { (log, length, tail) =>
-        log(s"$id length")
+        log(s"$id length = $length")
         Read.Bytes(tail, length.toInt)(op)
       }
   }
@@ -96,57 +99,152 @@ object Decompiler {
 
       tail
     }
+
+    def ExternalKind(s: SB): SB = Read.Byte(s) {(log, b, tail) =>
+      val kind: String = b match {
+        case 0 => "Function"
+        case 1 => "Table"
+        case 2 => "Memory"
+        case 3 => "Global"
+      }
+      log(s"kind = $kind")
+
+      tail
+    }
+
+    def ResizableLimits(s: SB): SB = Read.VarU(s) { (log, flags, tail) =>
+      log(s"maximum field is present = $flags")
+
+      Read.VarU(tail) { (log, initial, tail) =>
+        log(s"initial size = $initial")
+
+        if (flags == 0) tail
+        else Read.VarU(tail) { (log, maximum, tail) =>
+          log(s"maximum size = $maximum")
+          tail
+        }
+      }
+    }
+
+    def Elem(s: SB): SB = Read.VarS(s) { (log, t, tail) =>
+      log("elem type = anyfunc")
+      assert(t == -0x10)
+      tail
+    }
+
+    def Global(s: SB): SB = {
+      val tail = Value(s)
+      Read.VarU(tail) { (log, mutability, tail) =>
+        log(s"mutable = $mutability")
+        assert(mutability == 0 || mutability == 1)
+        tail
+      }
+    }
+    def Table(s: SB): SB = {
+      val tail = Elem(s)
+      ResizableLimits(tail)
+    }
+    def Memory(s: SB): SB = ResizableLimits(s)
   }
 
   object Section {
     def Type(s: SB): SB = Read.Vector(s, "func_type")(Decompiler.Type.Func)
-    def Import(s: SB): SB = Read.Vector(s, "import_entry")(Import.Entry)
-    object Import {
-      def Entry(s: SB): SB = ???
+    def Function(s: SB): SB = Read.Vector(s, "signature")(Read.VarU(_) { (log, index, tail) =>
+      log(s"type $index")
+      tail
+    })
+
+    def Import(s: SB): SB = Read.Vector(s, "import_entry") { s =>
+      Read.WithBytesLength(s, "module") { (log, moduleBytes, tail) =>
+        val module = new String(moduleBytes.toArray, "UTF-8")
+        log(s"module = $module")
+
+        Read.WithBytesLength(tail, "field") { (log, fieldBytes, tail) =>
+          val field = new String(fieldBytes.toArray, "UTF-8")
+          log(s"field = $field")
+
+          val followed = Decompiler.Type.ExternalKind(tail)
+
+          tail.head match {
+            case 0 => Read.VarU(followed) { (log, index, tail) =>
+              log(s"type index = $index")
+              tail
+            }
+            case 1 => Decompiler.Type.Table(followed)
+            case 2 => Decompiler.Type.Memory(followed)
+            case 3 => Decompiler.Type.Global(followed)
+          }
+        }
+      }
+    }
+
+    def Global(s: SB): SB = Read.Vector(s, "global") { s =>
+      val tail = Decompiler.Type.Global(s)
+      val endOp = 0x0b toByte
+
+      val expr = tail.takeWhile(_ != endOp) :+ endOp
+      out(expr, "<init expression>") // TODO describe further
+
+      tail.dropWhile(_ != endOp).tail
+    }
+
+    def Export(s: SB): SB = Read.Vector(s, "export") { s =>
+      Read.WithBytesLength(s, "field") { (log, fieldBytes, tail) =>
+        val field = new String(fieldBytes.toArray, "UTF-8")
+        log(s"field = $field")
+
+        val rest = Decompiler.Type.ExternalKind(tail)
+        Read.VarU(rest) { (log, index, tail) =>
+          log(s"index = $index")
+          tail
+        }
+      }
+    }
+
+    def Code(s: SB): SB = Read.Vector(s, "function body") { s =>
+      Read.VarU(s) { (log, bodySize, tail) =>
+        log(s"body size = $bodySize")
+
+        Read.Vector(tail, "local entry") { s =>
+          Read.Vector(s, "local") (Decompiler.Type.Value)
+        }
+      }
     }
   }
 
   private def section(s: SB): SB =
     Read.VarU(s) { (log, id, tail) =>
       val (idName, section): (String, Checker) = id match {
+        // TODO if id == 0, add name support
         case 1 => ("Type", Section.Type)
         case 2 => ("Import", Section.Import)
+        case 3 => ("Function", Section.Function)
+
+        case 6 => ("Global", Section.Global)
+        case 7 => ("Export", Section.Export)
+
+        case 10 => ("Code", Section.Code)
       }
       log(s"id = $idName")
-
-      // TODO if id == 0, add name support
 
       Read.VarU(tail) { (log, totalPayloadSize, tail) =>
         log(s"total payload size = $totalPayloadSize")
 
-        Read.Bytes(tail, totalPayloadSize toInt) { (log, payload, _) =>
-          section(payload)
+        Read.Bytes(tail, totalPayloadSize toInt) { (_, payload, tail) =>
+          val ret = section(payload)
+          assert(ret.isEmpty, ret.toList)
+
+          tail
         }
       }
     }
 
-    /*
-
-      val (name_len_bytes, tail3) = Read.Var(tail2)
-      val name_len = U.unpack(name_len_bytes).toInt
-      out(name_len_bytes, s"name = $name_len")
-
-      val (name_bytes, tail4) = tail3.splitAt(name_len)
-      val name = new String(name_bytes.toArray, "UTF-8")
-      out(name_bytes, s"name = $name")
-
-      tail4
-    } else {
-      tail2
-    }
-
-    val (payload, tail) = tail5.splitAt(payload_size)
-
-    tail*/
+  private def sections(s: SB): Unit = s match {
+    case Nil =>
+    case _ => sections(section(s))
+  }
 
   def check(s: SB): Unit = {
-    // TODO add support for multi sections
-    val ret = (magic _).andThen(version).andThen(section).apply(s)
-    assert(ret.isEmpty, ret.toList)
+    (magic _).andThen(version).andThen(sections).apply(s)
   }
 }

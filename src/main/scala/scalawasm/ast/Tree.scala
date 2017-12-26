@@ -6,35 +6,6 @@ object Tree {
   sealed trait BaseTrait extends Positional
   final case class Variable(id: Either[Long, String]) extends BaseTrait
 
-  case class ResizableLimits(initial: Int, maximum: Option[Int])
-
-  sealed trait Value extends BaseTrait
-  object Value {
-    final case class Integral(v: Long) extends Value
-    final case class Floating(v: Double) extends Value
-  }
-
-  sealed trait Sign extends BaseTrait
-  object Sign {
-    final case object Signed extends Sign
-    final case object Unsigned extends Sign
-  }
-
-  sealed trait Type extends BaseTrait
-  object Type {
-    sealed trait Element extends BaseTrait
-    final case object AnyFunc extends Element
-
-    sealed trait Block extends Type
-    case object Empty extends Block
-
-    sealed trait Value extends Block
-    final case object i32 extends Value
-    final case object i64 extends Value
-    final case object f32 extends Value
-    final case object f64 extends Value
-  }
-
   object Signature {
     final case class Block(results: Seq[Type]) extends BaseTrait
     final case class Function(params: Seq[Parameter], results: Seq[Type.Value]) extends BaseTrait
@@ -67,8 +38,10 @@ object Tree {
     final case class TeeLocal(label: Variable) extends Opcode
     final case class GetGlobal(label: Variable) extends Opcode
     final case class SetGlobal(label: Variable) extends Opcode
-    final case class LoadSizeAndSign(size: Long, sign: Sign) extends Opcode
-    final case class Load(tpe: Type, sizeAndSize: Option[LoadSizeAndSign], offset: Long, align: Long) extends Opcode
+    final case class Load(tpe: Type, sizeAndSize: Option[Load.SizeAndSign], offset: Long, align: Long) extends Opcode
+    object Load {
+      final case class SizeAndSign(size: Long, sign: Sign)
+    }
     final case class Store(tpe: Type, size: Option[Long], offset: Long, align: Long) extends Opcode
     final case object CurrentMemory extends Opcode
     final case object GrowMemory extends Opcode
@@ -143,26 +116,18 @@ object Tree {
 
   final case class TypeDef(name: Option[String], sig: Signature.Function) extends BaseTrait
 
-  final case class Import(module: String, field: String, kind: Import.Kind) extends BaseTrait
+  trait Import extends BaseTrait {
+    val module: String
+    val field: String
+  }
   object Import {
-    sealed trait Kind extends BaseTrait
-    object Kind {
-      final case class Function(name: Option[String], typeref: Option[Variable], sig: Signature.Function) extends Kind
-      final case class Table(name: Option[String], sig: Signature.Table) extends Kind
-      final case class Memory(name: Option[String], sig: Signature.Memory) extends Kind
-      final case class Global(name: Option[String], sig: Signature.Global) extends Kind
-    }
+    final case class Function(module: String, field: String, name: Option[String], typeref: Option[Variable], sig: Signature.Function) extends Import
+    final case class Table(module: String, field: String, name: Option[String], sig: Signature.Table) extends Import
+    final case class Memory(module: String, field: String, name: Option[String], sig: Signature.Memory) extends Import
+    final case class Global(module: String, field: String, name: Option[String], sig: Signature.Global) extends Import
   }
-  final case class Export(field: String, kind: Export.Kind) extends BaseTrait
-  object Export {
-    sealed trait Kind extends BaseTrait
-    object Kind {
-      final case class Function(var_ : Variable) extends Kind
-      final case class Table(var_ : Variable) extends Kind
-      final case class Memory(var_ : Variable) extends Kind
-      final case class Global(var_ : Variable) extends Kind
-    }
-  }
+
+  final case class Export(field: String, kind: Kind, var_ : Variable) extends BaseTrait
 
   final case class Module(name: Option[String], typedefs: Seq[TypeDef], funcs: Seq[Function], imports: Seq[Import],
                           exports: Seq[Export], table: Option[Table], memory: Option[Memory], globals: Seq[Global],

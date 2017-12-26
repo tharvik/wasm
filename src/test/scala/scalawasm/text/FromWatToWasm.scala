@@ -22,14 +22,14 @@ class FromWatToWasm extends FlatSpec with Matchers {
   }
 
   private def checkSameBinary(text: String) = {
-    val own = pipe(text)
-    val ref = getReferenceBinary(text)
-
+    val own = pipe(text).map(_.toList)
     own should be (right)
 
-    val (o, r) = (own.asInstanceOf[Right[Any, Stream[Byte]]].value, ref)
+    val ref = getReferenceBinary(text)
+    val (o, r) = (own.asInstanceOf[Right[Any, List[Byte]]].value, ref)
     Decompiler.check(o)
-    // TODO Decompiler.check(r)
+    println("--")
+    Decompiler.check(r)
     o should be (r)
   }
 
@@ -50,6 +50,10 @@ class FromWatToWasm extends FlatSpec with Matchers {
     checkSameBinary("(module)")
   }
 
+  "The Arithmetic module" should "be equals to the reference" in {
+    checkSameBinary(readTestData("Arithmetic.wat"))
+  }
+
   "The type section" should "be equals to the reference" in {
     checkSameBinary("(module (type (func)))")
     checkSameBinary("(module (type (func (param))))")
@@ -61,5 +65,9 @@ class FromWatToWasm extends FlatSpec with Matchers {
         |  (type (func (param $x i32) (result i32)))
         |)
       """.stripMargin)
+  }
+
+  "The import section" should "be equals to the reference" in {
+    checkSameBinary("""(module (import "spectest" "print" (func)))""")
   }
 }

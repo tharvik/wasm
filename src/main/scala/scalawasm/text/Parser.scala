@@ -1,7 +1,7 @@
 package scalawasm.text
 
 import scala.util.parsing.combinator.Parsers
-import scalawasm.ast.Token
+import scalawasm.ast._
 import scalawasm.ast.Tree.Opcode._
 import scalawasm.ast.Tree._
 import scalawasm.ast.Token._
@@ -19,9 +19,9 @@ object Parser extends Parsers {
     case FLOATLIT(v) => v
   })
 
-  private def value: Parser[Value] = positioned {
+  private def value: Parser[Value] =
     ( int ^^ Value.Integral
-    | float ^^ Value.Floating ) }
+    | float ^^ Value.Floating )
 
   private def var_ : Parser[Variable] = positioned {
     ( int ^^ { v => Variable(Left(v)) }
@@ -29,12 +29,12 @@ object Parser extends Parsers {
   private def name: Parser[String] = accept("name", { case NAME(n) => n })
   private def string: Parser[String] = accept("string", { case STRINGLIT(s) => s })
 
-  private def value_type : Parser[Type.Value] = positioned {
+  private def value_type : Parser[Type.Value] =
     ( I32 ^^^ Type.i32
     | I64 ^^^ Type.i64
     | F32 ^^^ Type.f32
-    | F64 ^^^ Type.f64 ) }
-  private def elem_type = positioned { ANYFUNC ^^^ Type.AnyFunc }
+    | F64 ^^^ Type.f64 )
+  private def elem_type = ANYFUNC ^^^ Type.AnyFunction
 
   private def unop: Parser[Type => Opcode] =
   ( CTZ ^^^ CountTrailingZeros
@@ -67,9 +67,9 @@ object Parser extends Parsers {
     | GT ~> opt(sign) ^^ { s => { t: Type => GreaterThan(t, s) } }
     | LE ~> opt(sign) ^^ { s => { t: Type => LessOrEqual(t, s) } }
     | GE ~> opt(sign) ^^ { s => { t: Type => GreaterOrEqual(t, s) } } )
-  private def sign: Parser[Sign] = positioned {
+  private def sign: Parser[Sign] =
     ( UNSIGNED ^^^ Sign.Unsigned
-    | SIGNED ^^^ Sign.Unsigned ) }
+    | SIGNED ^^^ Sign.Unsigned )
   private def offset: Parser[Long] = OFFSET ~ EQUAL ~> int
   // TODO ensure power of two
   private def align: Parser[Long] = ALIGN ~ EQUAL ~> int
@@ -109,11 +109,11 @@ object Parser extends Parsers {
 
   private def instr = expr
 
-  private def loadSizeAndSign: Parser[Option[Opcode.LoadSizeAndSign]] =
+  private def loadSizeAndSign: Parser[Option[Opcode.Load.SizeAndSign]] =
     ( LOAD ^^^ None
-    | LOAD8 ~> sign ^^ { s => Some(Opcode.LoadSizeAndSign(8, s)) }
-    | LOAD16 ~> sign ^^ { s => Some(Opcode.LoadSizeAndSign(16, s)) }
-    | LOAD32 ~> sign ^^ { s => Some(Opcode.LoadSizeAndSign(32, s)) }
+    | LOAD8 ~> sign ^^ { s => Some(Opcode.Load.SizeAndSign(8, s)) }
+    | LOAD16 ~> sign ^^ { s => Some(Opcode.Load.SizeAndSign(16, s)) }
+    | LOAD32 ~> sign ^^ { s => Some(Opcode.Load.SizeAndSign(32, s)) }
     )
 
   private def storeSize: Parser[Option[Long]] =
@@ -183,22 +183,22 @@ object Parser extends Parsers {
   private def typedef: Parser[TypeDef] = positioned { LPAREN ~ TYPE ~> opt(name) ~ (LPAREN ~ FUNC ~> func_sig_without_type <~ RPAREN ~ RPAREN) ^^ {
     case n ~ sig => TypeDef(n, sig) } }
 
-  private def import_ : Parser[Import] = positioned { LPAREN ~ IMPORT ~> string ~ string ~ imkind <~ RPAREN ^^ {
-    case m ~ f ~ k => Import(m, f, k) } }
-  private def imkind: Parser[Import.Kind] = positioned { LPAREN ~>
-    ( FUNC ~> opt(name) ~ func_sig ^^ { case n ~ (t ~ sig) => Import.Kind.Function(n, t, sig)}
-    | GLOBAL ~> opt(name) ~ global_sig ^^ { case n ~ sig => Import.Kind.Global(n, sig)}
-    | TABLE ~> opt(name) ~ table_sig ^^ { case n ~ sig => Import.Kind.Table(n, sig)}
-    | MEMORY ~> opt(name) ~ memory_sig ^^ { case n ~ sig => Import.Kind.Memory(n, sig)}
-    ) <~ RPAREN }
-  private def export: Parser[Export] = positioned { LPAREN ~ EXPORT ~> string ~ exkind <~ RPAREN ^^ {
-    case s ~ k => Export(s, k) } }
-  private def exkind: Parser[Export.Kind] = positioned { LPAREN ~>
-    ( FUNC ~> var_ ^^ Export.Kind.Function
-    | GLOBAL ~> var_ ^^ Export.Kind.Global
-    | TABLE ~> var_ ^^ Export.Kind.Table
-    | MEMORY ~> var_ ^^ Export.Kind.Memory
-    ) <~ RPAREN }
+  private def import_ : Parser[Import] = positioned { LPAREN ~ IMPORT ~> (string ~ string) >> { case m ~ f =>
+    LPAREN ~>
+      ( FUNC ~> opt(name) ~ func_sig ^^ { case n ~ (t ~ sig) => Import.Function(m, f, n, t, sig)}
+      | GLOBAL ~> opt(name) ~ global_sig ^^ { case n ~ sig => Import.Global(m, f, n, sig)}
+      | TABLE ~> opt(name) ~ table_sig ^^ { case n ~ sig => Import.Table(m, f, n, sig)}
+      | MEMORY ~> opt(name) ~ memory_sig ^^ { case n ~ sig => Import.Memory(m, f, n, sig)}
+      ) <~ RPAREN
+    } <~ RPAREN }
+  private def export: Parser[Export] = positioned { (LPAREN ~ EXPORT) ~> string ~ (LPAREN ~> (kind ~ var_) <~ (RPAREN ~ RPAREN)) ^^ {
+    case s ~ (k ~ v) => Export(s, k, v) } }
+  private def kind: Parser[Kind] =
+    ( FUNC ^^^ Kind.Function
+    | GLOBAL ^^^ Kind.Global
+    | TABLE ^^^ Kind.Table
+    | MEMORY ^^^ Kind.Memory
+    )
 
   private def moduleSpecCompat: Parser[Module] = positioned { LPAREN ~ MODULE ~> (
     opt(name) ~ rep(typedef) ~ (rep(import_) ~ rep(func)) ~ rep(export) ~ opt(table) ~ opt(memory) ~ rep(global) ~

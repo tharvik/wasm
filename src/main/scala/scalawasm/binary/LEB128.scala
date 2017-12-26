@@ -14,9 +14,10 @@ object LEB128 {
   object Signed {
     def pack(size: Int, value: Long): Seq[Byte] = {
       val bytes = splitAndExtend(size, value)
+      val seq = if (bytes.nonEmpty) bytes else Seq(0x00 toByte)
 
-      ((bytes.head & 0x7F toByte) +:
-        (bytes.tail map { _ | 0x80 toByte })) reverse
+      ((seq.head & 0x7F toByte) +:
+        (seq.tail map { _ | 0x80 toByte })) reverse
     }
 
     def unpack(stream: Seq[Byte]): Long = {
