@@ -2,6 +2,7 @@ package scalawasm.binary
 
 import LEB128.{Signed => S}
 import LEB128.{Unsigned => U}
+import scalawasm.binary.{Decompiler => This}
 
 object Decompiler {
 
@@ -178,14 +179,18 @@ object Decompiler {
       }
     }
 
-    def Global(s: SB): SB = Read.Vector(s, "global") { s =>
-      val tail = Decompiler.Type.Global(s)
+    def expr(s: SB, msg: String): SB = {
       val endOp = 0x0b toByte
 
-      val expr = tail.takeWhile(_ != endOp) :+ endOp
-      out(expr, "<init expression>") // TODO describe further
+      val expr = s.takeWhile(_ != endOp) :+ endOp
+      out(expr, s"<$msg expr>") // TODO describe further
+      s.dropWhile(_ != endOp).tail
+    }
 
-      tail.dropWhile(_ != endOp).tail
+    def Global(s: SB): SB = Read.Vector(s, "global") { s =>
+      val tail = Decompiler.Type.Global(s)
+
+      expr(tail, "init")
     }
 
     def Export(s: SB): SB = Read.Vector(s, "export") { s =>
@@ -202,12 +207,16 @@ object Decompiler {
     }
 
     def Code(s: SB): SB = Read.Vector(s, "function body") { s =>
-      Read.VarU(s) { (log, bodySize, tail) =>
-        log(s"body size = $bodySize")
-
-        Read.Vector(tail, "local entry") { s =>
-          Read.Vector(s, "local") (Decompiler.Type.Value)
+      Read.WithBytesLength(s, "body") { (_, body, tail) =>
+        val code = Read.Vector(body, "local entry") { s =>
+          Read.VarU(s) { (log, count, tail) =>
+            log(s"count of local with next type = $count")
+            This.Type.Value(tail)
+          }
         }
+
+        expr(code, "function")
+        tail
       }
     }
   }
