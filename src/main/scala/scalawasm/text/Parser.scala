@@ -131,10 +131,10 @@ object Parser extends Parsers {
     | BR_TABLE ~> rep1(var_) ^^ { vars => Opcode.BrTable(vars.init, vars.last) }
     | RETURN ^^^ Opcode.Return
     | CALL ~> var_ ^^ { v => Opcode.Call(v) }
-    | CALL_INDIRECT ~> var_ ^^ { v => Opcode.CallIndirect(v) }
+    | CALL_INDIRECT ~> func_sig_without_type ^^ { Opcode.CallIndirect(_) } // TODO without_type?
     | DROP ^^^ Opcode.Drop
     | SELECT ^^^ Opcode.Select
-    | GET_LOCAL ~> var_ ^^ { v => Opcode.GetLocal(v) }
+    | GET_LOCAL ~> var_ ^^ { Opcode.GetLocal(_) }
     | SET_LOCAL ~> var_ ^^ { v => Opcode.SetLocal(v) }
     | TEE_LOCAL ~> var_ ^^ { v => Opcode.TeeLocal(v) }
     | GET_GLOBAL ~> var_ ^^ { v => Opcode.GetLocal(v) }

@@ -68,7 +68,6 @@ object Binary {
     // integer test binary
     final case class Equal(type_ : Type) extends Opcode
     final case class NotEqual(type_ : Type) extends Opcode
-    // TODO Option[Sign] is for float where sign is meaningless
     final case class LessThan(type_ : Type, sign: Option[Sign]) extends Opcode
     final case class GreaterThan(type_ : Type, sign: Option[Sign]) extends Opcode
     final case class LessOrEqual(type_ : Type, sign: Option[Sign]) extends Opcode
@@ -104,8 +103,9 @@ object Binary {
     case class Function(indexes: Seq[Int]) extends Section
     // TODO add more
     case class Global(globals: Seq[(Signature.Global, Seq[Opcode])]) extends Section
-    case class Export(export: Seq[(String, Kind, Int)]) extends Section
+    case class Export(exports: Seq[(String, Kind, Int)]) extends Section
     // TODO add more
+    case class Code(codes: Seq[(Seq[(Int, AT.Value)], Seq[Opcode])]) extends Section
   }
 
   type TypeIndex = Int

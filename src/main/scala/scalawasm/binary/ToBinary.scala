@@ -1,6 +1,7 @@
 package scalawasm.binary
 
 import scalawasm.Config
+import scalawasm.ast.Binary.Opcode.Load.SizeAndSign
 import scalawasm.ast.Binary.Opcode._
 import scalawasm.ast.Binary.{Section => BSec, Signature => BSig}
 import scalawasm.ast.{Binary => B, Type => AT}
@@ -9,6 +10,9 @@ import scalawasm.binary.LEB128.Type._
 import scalawasm.binary.{ToBinary => This}
 
 object ToBinary {
+
+  private def log2(x: Long): Int = (Math.log(x) / Math.log(2)).toInt // TODO toInt
+
   private def toBinary(rl: A.ResizableLimits) =
     varuint1(if (rl.maximum.isDefined) 1 else 0).pack #:::
       varuint32(rl.initial).pack #:::
@@ -60,7 +64,6 @@ object ToBinary {
       This.toBinary(m.resizable_limits)
   }
 
-
   private def toBinaryTail(imp: BSig.Import): Stream[Byte] = {
     val (kind, tail) = imp match {
       case BSig.Import.Function(_, _, i) => (A.Kind.Function, varuint32(i).pack)
@@ -79,16 +82,28 @@ object ToBinary {
       bytes.toStream
   }
 
-  private def toBinary(expr: Seq[B.Opcode]): Stream[Byte] = expr.flatMap(toBinary).toStream #::: toBinary(B.Opcode.End)
+  private def toBinary(mi: MemoryImmediate): Stream[Byte] =
+    varuint32(log2(mi.align)).pack #:::
+      varuint32(mi.offset.toInt).pack // TODO toInt
+
+  private def toBinary(expr: Seq[B.Opcode]): Stream[Byte] = expr.flatMap(toBinary).toStream
   private def toBinary(opcode: B.Opcode): Stream[Byte] = {
-    def typeOffset(t: A.Type): Int = t match {
-      case A.Type.i32 => 0
-      case A.Type.i64 => 1
-      case A.Type.f32 => 2
-      case A.Type.f64 => 3
+    def typeOffset(t: AT): Int = t match {
+      case AT.i32 => 0
+      case AT.i64 => 1
+      case AT.f32 => 2
+      case AT.f64 => 3
+    }
+
+    def signOffset(s: A.Sign): Int = s match {
+      case A.Sign.Signed => 0
+      case A.Sign.Unsigned => 1
     }
 
     def op(id: Int) = uint8(id toByte).pack
+
+    def countOfCmpOpForIntegralType: Int = 11
+    def countOfCmpOpForFloatingType: Int = 6
 
     opcode match {
       case Unreachable => op(0x00)
@@ -98,30 +113,163 @@ object ToBinary {
       case If(t) => op(0x04) #::: Type.toBinary(t)
       case Else => op(0x05)
       case End => op(0x0b)
-      // TODO add others
-      case Const(A.Type.i32, A.Value.Integral(v)) => op(0x41) #::: varint32(v.toInt).pack
-      case Const(A.Type.i64, A.Value.Integral(v)) => op(0x42) #::: varint64(v).pack
-      case Const(A.Type.f32, A.Value.Floating(v)) => op(0x43) #::: uint32(java.lang.Float.floatToIntBits(v.toFloat)).pack
-      case Const(A.Type.f64, A.Value.Floating(v)) => op(0x44) #::: uint64(java.lang.Double.doubleToLongBits(v)).pack
+      case Br(i) => op(0x0c) #::: varuint32(i).pack
+      case BrIf(i) => op(0x0d) #::: varuint32(i).pack
+      case BrTable(targets, default) => op(0x0e) #:::
+        varuint32(targets.size).pack #:::
+        targets.flatMap(varint32(_).pack).toStream #:::
+        varuint32(default).pack
+      case Return => op(0x0f)
+
+      case Call(i) => op(0x10) #::: varuint32(i).pack
+      case CallIndirect(i) => op(0x11) #::: varuint32(i).pack #::: varuint1(0).pack
+
+      case Drop => op(0x1a)
+      case Select => op(0x1b)
+
+      case GetLocal(i) => op(0x20) #::: varuint32(i).pack
+      case SetLocal(i) => op(0x21) #::: varuint32(i).pack
+      case TeeLocal(i) => op(0x22) #::: varuint32(i).pack
+      case GetGlobal(i) => op(0x23) #::: varuint32(i).pack
+      case SetGlobal(i) => op(0x24) #::: varuint32(i).pack
+
+      case Load(t, None, mi) => op(0x28 + typeOffset(t)) #::: toBinary(mi)
+      case Load(t, Some(SizeAndSign(size, sign)), mi) =>
+        def opOffset(base: Int): Stream[Byte] = op((log2(size) - 3) * 2 + base + signOffset(sign))
+        val computedOp = t match {
+          case AT.i32 => opOffset(0x2c)
+          case AT.i64 => opOffset(0x30)
+        }
+        computedOp #::: toBinary(mi)
+
+      case Store(t, None, mi) => op(0x36 + typeOffset(t)) #::: toBinary(mi)
+      case Store(t, Some(size), mi) =>
+        def opOffset(base: Int): Stream[Byte] = op(base + log2(size) - 3)
+        val computedOp = t match {
+          case AT.i32 => opOffset(0x3a)
+          case AT.i64 => opOffset(0x3c)
+        }
+        computedOp #::: toBinary(mi)
+
+      case CurrentMemory => op(0x3f) #::: varuint1(0).pack
+      case GrowMemory => op(0x40) #::: varuint1(0).pack
+
+      case Const(AT.i32, A.Value.Integral(v)) => op(0x41) #::: varint32(v.toInt).pack
+      case Const(AT.i64, A.Value.Integral(v)) => op(0x42) #::: varint64(v).pack
+      case Const(AT.f32, A.Value.Floating(v)) => op(0x43) #::: uint32(java.lang.Float.floatToIntBits(v.toFloat)).pack
+      case Const(AT.f64, A.Value.Floating(v)) => op(0x44) #::: uint64(java.lang.Double.doubleToLongBits(v)).pack
+
+      case EqualZero(t) => op(0x45 + typeOffset(t) * countOfCmpOpForIntegralType)
+      case Equal(t) => t match {
+        case AT.i32 | AT.i64 => op(0x46 + typeOffset (t) * countOfCmpOpForIntegralType)
+        case AT.f32 | AT.f64 => op(0x5b + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
+      }
+      case NotEqual(t) => t match {
+        case AT.i32 | AT.i64 => op(0x47 + typeOffset(t) * countOfCmpOpForIntegralType)
+        case AT.f32 | AT.f64 => op(0x5c + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
+      }
+      case LessThan(t, Some(s)) => op(0x48 + typeOffset(t) * countOfCmpOpForIntegralType + signOffset(s))
+      case GreaterThan(t, Some(s)) => op(0x4a + typeOffset(t) * countOfCmpOpForIntegralType + signOffset(s))
+      case LessOrEqual(t, Some(s)) => op(0x4c + typeOffset(t) * countOfCmpOpForIntegralType + signOffset(s))
+      case GreaterOrEqual(t, Some(s)) => op(0x4e + typeOffset(t) * countOfCmpOpForIntegralType + signOffset(s))
+      case LessThan(t, None) => op(0x5d + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
+      case GreaterThan(t, None) => op(0x5e + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
+      case LessOrEqual(t, None) => op(0x5f + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
+      case GreaterOrEqual(t, None) => op(0x60 + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
+
+      case CountLeadingZeros(AT.i32) => op(0x67)
+      case CountTrailingZeros(AT.i32) => op(0x68)
+      case CountNumberOneBits(AT.i32) => op(0x69)
+      case Add(AT.i32) => op(0x6a)
+      case Substract(AT.i32) => op(0x6b)
+      case Multiply(AT.i32) => op(0x6c)
+      case Divide(AT.i32, Some(s)) => op(0x6d + signOffset(s))
+      case Remainder(AT.i32, s) => op(0x6f + signOffset(s))
+      case And(AT.i32) => op(0x71)
+      case Or(AT.i32) => op(0x72)
+      case Xor(AT.i32) => op(0x73)
+      case ShiftLeft(AT.i32) => op(0x74)
+      case ShiftRight(AT.i32, s) => op(0x75 + signOffset(s))
+      case RotateLeft(AT.i32) => op(0x77)
+      case RotateRight(AT.i32) => op(0x78)
+      case CountLeadingZeros(AT.i64) => op(0x79)
+      case CountTrailingZeros(AT.i64) => op(0x7a)
+      case CountNumberOneBits(AT.i64) => op(0x7b)
+      case Add(AT.i64) => op(0x7c)
+      case Substract(AT.i64) => op(0x7d)
+      case Multiply(AT.i64) => op(0x7e)
+      case Divide(AT.i64, Some(s)) => op(0x7f + signOffset(s))
+      case Remainder(AT.i64, s) => op(0x81 + signOffset(s))
+      case And(AT.i64) => op(0x83)
+      case Or(AT.i64) => op(0x84)
+      case Xor(AT.i64) => op(0x85)
+      case ShiftLeft(AT.i64) => op(0x86)
+      case ShiftRight(AT.i64, s) => op(0x87 + signOffset(s))
+      case RotateLeft(AT.i64) => op(0x89)
+      case RotateRight(AT.i64) => op(0x8a)
+
+      case Absolute(AT.f32) => op(0x8b)
+      case Negative(AT.f32) => op(0x8c)
+      case Ceiling(AT.f32) => op(0x8d)
+      case Floor(AT.f32) => op(0x8e)
+      //case Truncate(AT.i32, _, None) => op(0x8f) // TODO droping arg
+      case Nearest(AT.f32) => op(0x90)
+      case Sqrt(AT.f32) => op(0x91)
+      case Add(AT.f32) => op(0x92)
+      case Substract(AT.f32) => op(0x93)
+      case Multiply(AT.f32) => op(0x94)
+      case Divide(AT.f32, None) => op(0x95)
+      case Min(AT.f32) => op(0x96)
+      case Max(AT.f32) => op(0x97)
+      case CopySign(AT.f32) => op(0x98)
+
+      case Absolute(AT.f64) => op(0x99)
+      case Negative(AT.f64) => op(0x9a)
+      case Ceiling(AT.f64) => op(0x9b)
+      case Floor(AT.f64) => op(0x9c)
+      //case Truncate(AT.i32, _, None) => op(0x9d) // TODO droping arg
+      case Nearest(AT.f64) => op(0x9e)
+      case Sqrt(AT.f64) => op(0x9f)
+      case Add(AT.f64) => op(0xa0)
+      case Substract(AT.f64) => op(0xa1)
+      case Multiply(AT.f64) => op(0xa2)
+      case Divide(AT.f64, None) => op(0xa3)
+      case Min(AT.f64) => op(0xa4)
+      case Max(AT.f64) => op(0xa5)
+      case CopySign(AT.f64) => op(0xa6)
+
+      case Wrap(AT.i32, AT.i64) => op(0xa7)
+      case Truncate(AT.i32, AT.f32, s) => op(0xa8 + signOffset(s))
+      case Truncate(AT.i32, AT.f64, s) => op(0xaa + signOffset(s))
+      case Extend(AT.i64, AT.i32, s) => op(0xac + signOffset(s))
+      case Truncate(AT.i64, AT.f32, s) => op(0xae + signOffset(s))
+      case Truncate(AT.i64, AT.f64, s) => op(0xb0 + signOffset(s))
+      case Convert(AT.f32, AT.i32, s) => op(0xb2 + signOffset(s))
+      case Convert(AT.f32, AT.i64, s) => op(0xb4 + signOffset(s))
+      case Demote(AT.f32, AT.f64) => op(0xb6)
+      case Convert(AT.f64, AT.i32, s) => op(0xb7 + signOffset(s))
+      case Convert(AT.f64, AT.i64, s) => op(0xb9 + signOffset(s))
+      case Promote(AT.f64, AT.f32) => op(0xbb)
+
+      case Reinterpret(AT.f64, AT.f32) => op(0xbb)
     }
   }
 
   private def toBinary(s: BSec): Stream[Byte] = {
     val (id: Option[Int], content: Seq[Any], payload: Stream[Byte]) = s match {
-      // TODO better than wrapping in if/else
       case BSec.Type(types) =>
-        (Some(0x01), types,
+        (Some(1), types,
           varuint32(types.length).pack #:::
             types.flatMap { Signature.toBinary }.toStream)
       case BSec.Import(entries) =>
-        (Some(0x02), entries,
+        (Some(2), entries,
           varuint32(entries.length).pack #:::
             entries.flatMap { i =>
               pack(i.module) #:::
                 pack(i.field) #:::
                 toBinaryTail(i) }.toStream)
       case BSec.Function(indexes) =>
-        (Some(0x03), indexes, varuint32(indexes.length).pack #:::
+        (Some(3), indexes, varuint32(indexes.length).pack #:::
           indexes.map(_.toByte).toStream)
       /*case AS.Table(entries) =>
         varuint32(entries.length).pack #:::
@@ -130,20 +278,29 @@ object ToBinary {
         varuint32(entries.length).pack #:::
           (entries flatMap { B.Type.toBinary } toStream)*/
       case BSec.Global(globals) =>
-        (Some(0x06), globals, varuint32(globals.length).pack #:::
+        (Some(6), globals, varuint32(globals.length).pack #:::
           globals.flatMap { case (g, expr) => Signature.toBinary(g) #::: toBinary(expr) }.toStream)
       case BSec.Export(exports) =>
-        (Some(0x07), exports, varuint32(exports.length).pack #:::
+        (Some(7), exports, varuint32(exports.length).pack #:::
           exports.flatMap { case (field, k, i) => pack(field) #::: toBinary(k) #::: varuint32(i).pack }.toStream)
       /*case AS.Start(index) =>
         varuint32(index).pack
       case AS.Element(entries) =>
         varuint32(entries.size).pack #:::
-          (entries flatMap { toBinary } toStream)
-      case AS.Code(bodies) =>
-        varuint32(bodies.size).pack #:::
-          (bodies flatMap { toBinary } toStream)
-      case AS.Data(entries) =>
+          (entries flatMap { toBinary } toStream)*/
+      case BSec.Code(codes) =>
+        (Some(10), codes, varuint32(codes.size).pack #:::
+          codes.flatMap { case (types, expr) =>
+            val body = varuint32(types.size).pack #:::
+              types.flatMap { case (count, t) =>
+                  varuint32(count).pack #:::
+                    Type.toBinary(t)
+              }.toStream #::: toBinary(expr)
+
+            varuint32(body.size).pack #:::
+              body
+          }.toStream)
+      /*case AS.Data(entries) =>
         varuint32(entries.size).pack #:::
           (entries flatMap { toBinary } toStream)*/
     }

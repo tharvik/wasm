@@ -7,7 +7,7 @@ object Tree {
   final case class Variable(id: Either[Long, String]) extends BaseTrait
 
   object Signature {
-    final case class Block(results: Seq[Type]) extends BaseTrait
+    final case class Block(results: Seq[Type.Block]) extends BaseTrait
     final case class Function(params: Seq[Parameter], results: Seq[Type.Value]) extends BaseTrait
     final case class Global(mutable: Boolean, type_ : Type.Value) extends BaseTrait
     final case class Table(resizableLimits: ResizableLimits, type_ : Type.Element) extends BaseTrait
@@ -17,8 +17,8 @@ object Tree {
   sealed trait Expr extends BaseTrait
   object Expr {
     final case class Block(name: Option[String], sig: Signature.Block, exprs: Seq[Expr]) extends Expr
-    final case class Loop(name: Option[String], result: Seq[Type], exprs: Seq[Expr]) extends Expr
-    final case class If(name: Option[String], result: Seq[Type], thn: Seq[Expr], els: Seq[Expr]) extends Expr
+    final case class Loop(name: Option[String], result: Seq[Type.Block], exprs: Seq[Expr]) extends Expr
+    final case class If(name: Option[String], result: Seq[Type.Block], thn: Seq[Expr], els: Seq[Expr]) extends Expr
   }
 
   sealed trait Opcode extends Expr
@@ -30,7 +30,7 @@ object Tree {
     final case class BrTable(labels: Seq[Variable], default: Variable) extends Opcode
     final case object Return extends Opcode
     final case class Call(label: Variable) extends Opcode
-    final case class CallIndirect(label: Variable) extends Opcode
+    final case class CallIndirect(sig: Signature.Function) extends Opcode
     final case object Drop extends Opcode
     final case object Select extends Opcode
     final case class GetLocal(label: Variable) extends Opcode
@@ -103,7 +103,7 @@ object Tree {
   }
 
   final case class Parameter(name: Option[String], type_ : Type.Value) extends BaseTrait
-  final case class Local(name: Option[String], type_ : Type) extends BaseTrait
+  final case class Local(name: Option[String], type_ : Type.Value) extends BaseTrait
   final case class Function(name: Option[String], typeref: Option[Variable], sig: Signature.Function, locals: Seq[Local], instrs: Seq[Expr]) extends BaseTrait
 
   final case class Global(name: Option[String], sig: Signature.Global, instrs: Seq[Expr]) extends BaseTrait
