@@ -13,11 +13,21 @@ object LEB128 {
 
   object Signed {
     def pack(size: Int, value: Long): Seq[Byte] = {
-      val bytes = splitAndExtend(size, value)
-      val seq = if (bytes.nonEmpty) bytes else Seq(0x00 toByte)
+      def signBitIsSet(v: Byte): Boolean = (v & 0x40) != 0
 
-      ((seq.head & 0x7F toByte) +:
-        (seq.tail map { _ | 0x80 toByte })) reverse
+      def rec(v: Long, more: Boolean): Seq[Byte] = if (!more) Seq.empty else {
+        val byte = (v & 0x7f).toByte
+        val nextV = v >> 7
+
+        val nextMore = !((nextV == 0 && !signBitIsSet(byte)) || (nextV == -1 && signBitIsSet(byte)))
+
+        val toEmit = if (!nextMore) byte else (byte | 0x80).toByte
+
+        toEmit +: rec(nextV, nextMore)
+      }
+
+      val bytes: Seq[Byte] = rec(value, more = true)
+      if (bytes.nonEmpty) bytes else Seq(0x00)
     }
 
     def unpack(stream: Seq[Byte]): Long = {
@@ -38,13 +48,19 @@ object LEB128 {
 
   object Unsigned {
     def pack(size: Int, value: Long): Seq[Byte] = {
-      val bytes = splitAndExtend(size, value)
-      val seq = if (bytes.nonEmpty) bytes else Seq(0x00 toByte)
+      assert(value >= 0)
 
-      (seq.head +:
-        (seq.tail map {
-          _ | 0x80 toByte
-        })) reverse
+      def rec(v: Long): Seq[Byte] = {
+        val byte = (v & 0x7f).toByte
+        val nextV = v >> 7
+
+        val toEmit = if (nextV != 0) (byte | 0x80).toByte else byte
+        def next = rec(nextV)
+
+        toEmit +: (if (nextV != 0) rec(nextV) else Seq.empty)
+      }
+
+      rec(value)
     }
 
 

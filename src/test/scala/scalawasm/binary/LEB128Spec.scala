@@ -29,8 +29,8 @@ class LEB128Spec extends FlatSpec with Matchers {
     packS(-127) should be (byteStream(1 + 0x80, 0x7f))
     packS(128) should be (byteStream(0 + 0x80, 1))
     packS(-128) should be (byteStream(0 + 0x80, 0x7f))
-    packS(128) should be (byteStream(1 + 0x80, 1))
-    packS(-128) should be (byteStream(0x7f + 0x80, 0x7e))
+    packS(129) should be (byteStream(1 + 0x80, 1))
+    packS(-129) should be (byteStream(0x7f + 0x80, 0x7e))
   }
 
   "wasm types" should "correctly translate to binary" in {
