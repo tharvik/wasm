@@ -69,7 +69,7 @@ object Parser extends Parsers {
     | GE ~> opt(sign) ^^ { s => { t: Type => GreaterOrEqual(t, s) } } )
   private def sign: Parser[Sign] =
     ( UNSIGNED ^^^ Sign.Unsigned
-    | SIGNED ^^^ Sign.Unsigned )
+    | SIGNED ^^^ Sign.Signed )
   private def offset: Parser[Long] = OFFSET ~ EQUAL ~> int
   // TODO ensure power of two
   private def align: Parser[Long] = ALIGN ~ EQUAL ~> int
@@ -126,19 +126,19 @@ object Parser extends Parsers {
   private def op: Parser[Opcode] = positioned {
     ( UNREACHABLE ^^^ Opcode.Unreachable
     | NOP ^^^ Opcode.Nop
-    | BR ~> var_ ^^ { v => Opcode.Br(v) }
-    | BR_IF ~> var_ ^^ { v => Opcode.BrIf(v) }
+    | BR ~> var_ ^^ Opcode.Br
+    | BR_IF ~> var_ ^^ Opcode.BrIf
     | BR_TABLE ~> rep1(var_) ^^ { vars => Opcode.BrTable(vars.init, vars.last) }
     | RETURN ^^^ Opcode.Return
-    | CALL ~> var_ ^^ { v => Opcode.Call(v) }
-    | CALL_INDIRECT ~> func_sig_without_type ^^ { Opcode.CallIndirect(_) } // TODO without_type?
+    | CALL ~> var_ ^^ Opcode.Call
+    | CALL_INDIRECT ~> func_sig_without_type ^^ Opcode.CallIndirect // TODO without_type?
     | DROP ^^^ Opcode.Drop
     | SELECT ^^^ Opcode.Select
-    | GET_LOCAL ~> var_ ^^ { Opcode.GetLocal(_) }
-    | SET_LOCAL ~> var_ ^^ { v => Opcode.SetLocal(v) }
-    | TEE_LOCAL ~> var_ ^^ { v => Opcode.TeeLocal(v) }
-    | GET_GLOBAL ~> var_ ^^ { v => Opcode.GetLocal(v) }
-    | SET_GLOBAL ~> var_ ^^ { v => Opcode.SetLocal(v) }
+    | GET_LOCAL ~> var_ ^^ Opcode.GetLocal
+    | SET_LOCAL ~> var_ ^^ Opcode.SetLocal
+    | TEE_LOCAL ~> var_ ^^ Opcode.TeeLocal
+    | GET_GLOBAL ~> var_ ^^ Opcode.GetGlobal
+    | SET_GLOBAL ~> var_ ^^ Opcode.SetGlobal
     | value_type ~ DOT ~ loadSizeAndSign ~ opt(offset) ~ opt(align) ^^ {
       case t ~ _ ~ sizeAndSign ~ off ~ ali => Opcode.Load(t, sizeAndSign, off.getOrElse(0), ali.getOrElse(0)) }
     | value_type ~ DOT ~ storeSize ~ opt(offset) ~ opt(align) ^^ {

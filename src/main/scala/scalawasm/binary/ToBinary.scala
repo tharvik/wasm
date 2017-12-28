@@ -1,6 +1,6 @@
 package scalawasm.binary
 
-import scalawasm.Config
+import scalawasm.Config.enableSpecCompat
 import scalawasm.ast.Binary.Opcode.Load.SizeAndSign
 import scalawasm.ast.Binary.Opcode._
 import scalawasm.ast.Binary.{Section => BSec, Signature => BSig}
@@ -83,7 +83,7 @@ object ToBinary {
   }
 
   private def toBinary(mi: MemoryImmediate): Stream[Byte] =
-    varuint32(log2(mi.align)).pack #:::
+    varuint32(if (mi.align == 0) 0 else log2(mi.align)).pack #::: // TODO really packing like this?
       varuint32(mi.offset.toInt).pack // TODO toInt
 
   private def toBinary(expr: Seq[B.Opcode]): Stream[Byte] = expr.flatMap(toBinary).toStream
@@ -99,6 +99,12 @@ object ToBinary {
       case A.Sign.Signed => 0
       case A.Sign.Unsigned => 1
     }
+
+    def opTypeOffset(t: AT, ids: Int*) = op(ids(typeOffset(t)))
+    def opTypeOffsetFloat(t: AT, ids: Int*) = op(ids(typeOffset(t) - 2))
+    def opTypeOffsetInt(t: AT, ids: Int*) = opTypeOffset(t, ids:_*)
+    def opTypeAndSignOffsetInt(t: AT, s: A.Sign, ids: Int*) = op(ids(typeOffset(t)) + signOffset(s))
+    def opTypeAndSignOffsetFloat(t: AT, s: A.Sign, ids: Int*) = op(ids(typeOffset(t) - 2) + signOffset(s))
 
     def op(id: Int) = uint8(id toByte).pack
 
@@ -177,78 +183,43 @@ object ToBinary {
       case LessOrEqual(t, None) => op(0x5f + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
       case GreaterOrEqual(t, None) => op(0x60 + (typeOffset(t) - 2) * countOfCmpOpForFloatingType)
 
-      case CountLeadingZeros(AT.i32) => op(0x67)
-      case CountTrailingZeros(AT.i32) => op(0x68)
-      case CountNumberOneBits(AT.i32) => op(0x69)
-      case Add(AT.i32) => op(0x6a)
-      case Substract(AT.i32) => op(0x6b)
-      case Multiply(AT.i32) => op(0x6c)
-      case Divide(AT.i32, Some(s)) => op(0x6d + signOffset(s))
-      case Remainder(AT.i32, s) => op(0x6f + signOffset(s))
-      case And(AT.i32) => op(0x71)
-      case Or(AT.i32) => op(0x72)
-      case Xor(AT.i32) => op(0x73)
-      case ShiftLeft(AT.i32) => op(0x74)
-      case ShiftRight(AT.i32, s) => op(0x75 + signOffset(s))
-      case RotateLeft(AT.i32) => op(0x77)
-      case RotateRight(AT.i32) => op(0x78)
-      case CountLeadingZeros(AT.i64) => op(0x79)
-      case CountTrailingZeros(AT.i64) => op(0x7a)
-      case CountNumberOneBits(AT.i64) => op(0x7b)
-      case Add(AT.i64) => op(0x7c)
-      case Substract(AT.i64) => op(0x7d)
-      case Multiply(AT.i64) => op(0x7e)
-      case Divide(AT.i64, Some(s)) => op(0x7f + signOffset(s))
-      case Remainder(AT.i64, s) => op(0x81 + signOffset(s))
-      case And(AT.i64) => op(0x83)
-      case Or(AT.i64) => op(0x84)
-      case Xor(AT.i64) => op(0x85)
-      case ShiftLeft(AT.i64) => op(0x86)
-      case ShiftRight(AT.i64, s) => op(0x87 + signOffset(s))
-      case RotateLeft(AT.i64) => op(0x89)
-      case RotateRight(AT.i64) => op(0x8a)
+      case CountLeadingZeros(t) => opTypeOffsetInt(t, 0x67, 0x79)
+      case CountTrailingZeros(t) => opTypeOffsetInt(t, 0x68, 0x7a)
+      case CountNumberOneBits(t) => opTypeOffsetInt(t, 0x69, 0x7b)
+      case Add(t) => opTypeOffset(t, 0x6a, 0x7c, 0x92, 0xa0)
+      case Substract(t) => opTypeOffset(t, 0x6b, 0x7d, 0x93, 0xa1)
+      case Multiply(t) => opTypeOffset(t, 0x6c, 0x7e, 0x94, 0xa2)
+      case Divide(t, Some(s)) => opTypeAndSignOffsetInt(t, s, 0x6d, 0x7f)
+      case Remainder(t, s) => opTypeAndSignOffsetInt(t, s, 0x6f, 0x81)
+      case And(t) => opTypeOffsetInt(t, 0x71, 0x83)
+      case Or(t) => opTypeOffsetInt(t, 0x72, 0x84)
+      case Xor(t) => opTypeOffsetInt(t, 0x73, 0x85)
+      case ShiftLeft(t) => opTypeOffsetInt(t, 0x74, 0x86)
+      case ShiftRight(t, s) => opTypeAndSignOffsetInt(t, s, 0x75, 0x87)
+      case RotateLeft(t) => opTypeOffsetInt(t, 0x77, 0x89)
+      case RotateRight(t) => opTypeOffsetInt(t, 0x78, 0x8a)
 
-      case Absolute(AT.f32) => op(0x8b)
-      case Negative(AT.f32) => op(0x8c)
-      case Ceiling(AT.f32) => op(0x8d)
-      case Floor(AT.f32) => op(0x8e)
       //case Truncate(AT.i32, _, None) => op(0x8f) // TODO droping arg
-      case Nearest(AT.f32) => op(0x90)
-      case Sqrt(AT.f32) => op(0x91)
-      case Add(AT.f32) => op(0x92)
-      case Substract(AT.f32) => op(0x93)
-      case Multiply(AT.f32) => op(0x94)
-      case Divide(AT.f32, None) => op(0x95)
-      case Min(AT.f32) => op(0x96)
-      case Max(AT.f32) => op(0x97)
-      case CopySign(AT.f32) => op(0x98)
 
-      case Absolute(AT.f64) => op(0x99)
-      case Negative(AT.f64) => op(0x9a)
-      case Ceiling(AT.f64) => op(0x9b)
-      case Floor(AT.f64) => op(0x9c)
-      //case Truncate(AT.i32, _, None) => op(0x9d) // TODO droping arg
-      case Nearest(AT.f64) => op(0x9e)
-      case Sqrt(AT.f64) => op(0x9f)
-      case Add(AT.f64) => op(0xa0)
-      case Substract(AT.f64) => op(0xa1)
-      case Multiply(AT.f64) => op(0xa2)
-      case Divide(AT.f64, None) => op(0xa3)
-      case Min(AT.f64) => op(0xa4)
-      case Max(AT.f64) => op(0xa5)
-      case CopySign(AT.f64) => op(0xa6)
+      case Absolute(t) => opTypeOffsetFloat(t, 0x8b, 0x99)
+      case Negative(t) => opTypeOffsetFloat(t, 0x8c, 0x9a)
+      case Ceiling(t) => opTypeOffsetFloat(t, 0x8d, 0x9b)
+      case Floor(t) => opTypeOffsetFloat(t, 0x8e, 0x9c)
+      //case Truncate(AT.i32, _, None) => opTypeOffsetFloat(t, 0x9d) // TODO droping arg
+      case Nearest(t) => opTypeOffsetFloat(t, 0x90, 0x9e)
+      case Sqrt(t) => opTypeOffsetFloat(t, 0x91, 0x9f)
+      case Divide(t, None) => opTypeOffsetFloat(t, 0x95, 0xa3)
+      case Min(t) => opTypeOffsetFloat(t, 0x96, 0xa4)
+      case Max(t) => opTypeOffsetFloat(t, 0x97, 0xa5)
+      case CopySign(t) => opTypeOffsetFloat(t, 0x98, 0xa6)
 
-      case Wrap(AT.i32, AT.i64) => op(0xa7)
-      case Truncate(AT.i32, AT.f32, s) => op(0xa8 + signOffset(s))
-      case Truncate(AT.i32, AT.f64, s) => op(0xaa + signOffset(s))
+      case Wrap(_, _) => op(0xa7) // TODO dropping arg
+      case Truncate(AT.i32, t, s) => opTypeAndSignOffsetFloat(t, s, 0xa8, 0xaa)
       case Extend(AT.i64, AT.i32, s) => op(0xac + signOffset(s))
-      case Truncate(AT.i64, AT.f32, s) => op(0xae + signOffset(s))
-      case Truncate(AT.i64, AT.f64, s) => op(0xb0 + signOffset(s))
-      case Convert(AT.f32, AT.i32, s) => op(0xb2 + signOffset(s))
-      case Convert(AT.f32, AT.i64, s) => op(0xb4 + signOffset(s))
+      case Truncate(AT.i64, t, s) => opTypeAndSignOffsetFloat(t, s, 0xae, 0xb0)
+      case Convert(AT.f32, t, s) => opTypeAndSignOffsetInt(t, s, 0xb2, 0xb4)
       case Demote(AT.f32, AT.f64) => op(0xb6)
-      case Convert(AT.f64, AT.i32, s) => op(0xb7 + signOffset(s))
-      case Convert(AT.f64, AT.i64, s) => op(0xb9 + signOffset(s))
+      case Convert(AT.f64, t, s) => opTypeAndSignOffsetInt(t, s, 0xb7, 0xb9)
       case Promote(AT.f64, AT.f32) => op(0xbb)
 
       case Reinterpret(AT.f64, AT.f32) => op(0xbb)
@@ -273,10 +244,10 @@ object ToBinary {
           indexes.map(_.toByte).toStream)
       /*case AS.Table(entries) =>
         varuint32(entries.length).pack #:::
-          (entries flatMap { B.Type.toBinary } toStream)
-      case AS.Memory(entries) =>
-        varuint32(entries.length).pack #:::
           (entries flatMap { B.Type.toBinary } toStream)*/
+      case BSec.Memory(memories) =>
+        (Some(5), memories, varuint32(memories.length).pack #:::
+          memories.flatMap { m => Signature.toBinary(m) }.toStream)
       case BSec.Global(globals) =>
         (Some(6), globals, varuint32(globals.length).pack #:::
           globals.flatMap { case (g, expr) => Signature.toBinary(g) #::: toBinary(expr) }.toStream)
@@ -289,16 +260,18 @@ object ToBinary {
         varuint32(entries.size).pack #:::
           (entries flatMap { toBinary } toStream)*/
       case BSec.Code(codes) =>
-        (Some(10), codes, varuint32(codes.size).pack #:::
-          codes.flatMap { case (types, expr) =>
-            val body = varuint32(types.size).pack #:::
-              types.flatMap { case (count, t) =>
+        (Some(10), codes,
+          varuint32(codes.size).pack #:::
+            codes.flatMap { case (types, expr) =>
+              val body = varuint32(types.size).pack #:::
+                types.flatMap { case (count, t) =>
                   varuint32(count).pack #:::
                     Type.toBinary(t)
-              }.toStream #::: toBinary(expr)
+                }.toStream #::: toBinary(expr)
 
-            varuint32(body.size).pack #:::
-              body
+              (if (enableSpecCompat) varuint32CompatPack(body.size)
+              else varuint32(body.size).pack) #:::
+                body
           }.toStream)
       /*case AS.Data(entries) =>
         varuint32(entries.size).pack #:::
@@ -307,8 +280,8 @@ object ToBinary {
 
     // TODO quirk spec#625
     val size: Stream[Byte] =
-      if (Config.enableSpecCompat)
-        ((0 to 3).map { i => ((payload.length >> (i * 7)) & 0x7F) | 0x80 } :+ 0x00).map(_.toByte).toStream
+      if (enableSpecCompat)
+        varuint32CompatPack(payload.length)
       else
         varuint32(payload.length).pack
 

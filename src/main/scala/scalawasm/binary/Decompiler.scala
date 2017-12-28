@@ -187,6 +187,10 @@ object Decompiler {
       s.dropWhile(_ != endOp).tail
     }
 
+    def Memory(s: SB): SB = Read.Vector(s, "memory") { s =>
+      Decompiler.Type.Memory(s)
+    }
+
     def Global(s: SB): SB = Read.Vector(s, "global") { s =>
       val tail = Decompiler.Type.Global(s)
 
@@ -215,7 +219,8 @@ object Decompiler {
           }
         }
 
-        expr(code, "function")
+        out(code, "<function body>")
+        assert(code.last == 0x0b)
         tail
       }
     }
@@ -229,6 +234,7 @@ object Decompiler {
         case 2 => ("Import", Section.Import)
         case 3 => ("Function", Section.Function)
 
+        case 5 => ("Memory", Section.Memory)
         case 6 => ("Global", Section.Global)
         case 7 => ("Export", Section.Export)
 

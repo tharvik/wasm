@@ -8,76 +8,6 @@ import scalawasm.{ast => A}
 import scalawasm.text.ParsingError
 
 object ToBinaryAst {
-  trait BasicSpace[T, A] {
-    val seq: Seq[T]
-    val tr: A => T
-    type implType
-    val impl: Seq[T] => implType
-
-    def apply(a: A): Int = {
-      val ret = seq.indexOf(tr(a))
-      assert(ret >= 0)
-      ret
-    }
-
-    def +(t: T): implType = impl(seq :+ t)
-  }
-
-  trait OptStringBasicSpace extends BasicSpace[Option[String], String] {
-    override val tr = Some(_)
-  }
-
-  case class TypeSpace(seq: Seq[BSig.Function] = Seq.empty, map: Map[String, Int] = Map.empty) {
-    def apply(sig: BSig.Function): Int = {
-      val ret = seq.indexOf(sig)
-      assert(ret >= 0)
-      ret
-    }
-
-    def +(name: Option[String], sig: BSig.Function): TypeSpace = {
-      val newMap = name.fold(map) {n => map + (n -> seq.size) }
-      val newSeq = if (!seq.contains(sig)) seq :+ sig else seq
-      TypeSpace(newSeq, newMap)
-    }
-  }
-
-  case class FunctionSpace(seq: Seq[Option[String]] = Seq.empty) extends OptStringBasicSpace {
-    override val impl = FunctionSpace
-    override type implType = FunctionSpace
-  }
-
-  case class GlobalSpace(seq: Seq[Option[String]] = Seq.empty) extends OptStringBasicSpace {
-    override val impl = GlobalSpace
-    override type implType = GlobalSpace
-  }
-
-  case class MemorySpace(seq: Seq[Option[String]] = Seq.empty) extends OptStringBasicSpace {
-    override val impl = MemorySpace
-    override type implType = MemorySpace
-  }
-
-  case class TableSpace(seq: Seq[Option[String]] = Seq.empty) extends OptStringBasicSpace {
-    override val impl = TableSpace
-    override type implType = TableSpace
-  }
-
-  case class LocalSpace(seq: Seq[Option[String]] = Seq.empty) extends OptStringBasicSpace {
-    override val impl = LocalSpace
-    override type implType = LocalSpace
-  }
-
-  case class BranchSpace(seq: Seq[Option[String]] = Seq.empty) extends OptStringBasicSpace {
-    override val impl = BranchSpace
-    override type implType = BranchSpace
-  }
-
-  case class Spaces(types: TypeSpace, funcs: FunctionSpace, globals: GlobalSpace, memories: MemorySpace,
-                    tables: TableSpace, locals: LocalSpace, branches: BranchSpace)
-  object Spaces {
-    val empty = Spaces(
-      TypeSpace(), FunctionSpace(), GlobalSpace(), MemorySpace(), TableSpace(), LocalSpace(),
-      BranchSpace())
-  }
 
   object Signature {
     def Global(g: TSig.Global): BSig.Global = BSig.Global(g.type_, g.mutable)
@@ -107,14 +37,14 @@ object ToBinaryAst {
         val newSpace = f.locals.foldLeft(spaces) { case (s, l) =>
             s.copy(locals = s.locals + l.name)
         }
-        (runlength(f.locals.map(_.type_)), expr(f.instrs, newSpace))
+        (runlength(f.locals.map(_.type_)), expr(f.instrs, newSpace) :+ B.Opcode.End)
       }
     }
 
-    def Type(types: Seq[T.TypeDef]): TypeSpace = {
+    def Type(types: Seq[T.TypeDef]): Spaces.TypeSpace = {
       val newSeq = types.map(t => Signature.Function(t.sig))
       val newMap = types.zipWithIndex.flatMap { case (t, i) => t.name.map((_, i))}.toMap
-      TypeSpace(newSeq, newMap)
+      Spaces.TypeSpace(newSeq, newMap)
     }
 
     // improvement on stdlib
@@ -190,6 +120,11 @@ object ToBinaryAst {
       }
     }
 
+    // TODO dropping name
+    def Memory(memory: Option[T.Memory]): Seq[BSig.Memory] = memory.toList.map { m =>
+      BSig.Memory(m.sig.resizableLimits)
+    }
+
     def Function(funcs: Seq[T.Function], spaces: Spaces): (Seq[BSig.Function], Spaces) =
       funcs.foldLeft((Seq[BSig.Function](), spaces)) { case ((seq, s), f) =>
         (seq :+ Signature.Function(f.sig),
@@ -199,7 +134,7 @@ object ToBinaryAst {
       assert(spaces.branches.seq.isEmpty)
       assert(spaces.locals.seq.isEmpty)
       globals.foldLeft((Seq[(BSig.Global, Seq[B.Opcode])](), spaces)) { case ((seq, s), g) =>
-        (seq :+ (BSig.Global(g.sig.type_, g.sig.mutable), expr(g.instrs, spaces)),
+        (seq :+ (BSig.Global(g.sig.type_, g.sig.mutable), expr(g.instrs, spaces) :+ B.Opcode.End),
           s.copy(globals = s.globals + g.name))
       }
     }
@@ -209,13 +144,14 @@ object ToBinaryAst {
         e.var_.id.map { name =>
           e.kind match {
             case A.Kind.Function => spaces.funcs(name) toLong
+            // TODO add others
           }
         }.merge.toInt // TODO toInt
       (e.field, e.kind, index)
     }
   }
 
-  private def expr(e: Seq[T.Expr], spaces: Spaces): Seq[B.Opcode] = e.flatMap(op(_, spaces)) :+ B.Opcode.End
+  private def expr(e: Seq[T.Expr], spaces: Spaces): Seq[B.Opcode] = e.flatMap(op(_, spaces))
   private def op(e: T.Expr, spaces: Spaces): Seq[B.Opcode] = {
     import T.{Opcode => TO}
     import B.{Opcode => BO}
@@ -228,21 +164,28 @@ object ToBinaryAst {
     def blockSig(seq: Seq[A.Type.Block]): A.Type.Block =
       seq.headOption.getOrElse(A.Type.Empty)
 
+    def MemoryImmediate(t: A.Type, s: Option[Long], align: Long, offset: Long): BO.MemoryImmediate = {
+      val computedAlign: Int = s.fold(t match {
+        case A.Type.i32 | A.Type.f32 => 4
+        case A.Type.i64 | A.Type.f64 => 8
+      }) { size => (size / 8).toInt }
+      BO.MemoryImmediate(computedAlign, offset)
+    }
+
     e match {
       case TO.Unreachable => BO.Unreachable
       case TO.Nop => BO.Nop
       case T.Expr.Block(name, sig, exprs) =>
         val newSpace = spaces.copy(branches = spaces.branches + name)
-        BO.Block(blockSig(sig.results)) +: expr(exprs, newSpace)
+        BO.Block(blockSig(sig.results)) +: expr(exprs, newSpace) :+ B.Opcode.End
       case T.Expr.Loop(name, sig, exprs) =>
         val newSpace = spaces.copy(branches = spaces.branches + name)
-        BO.Loop(blockSig(sig)) +: expr(exprs, newSpace)
+        BO.Loop(blockSig(sig)) +: expr(exprs, newSpace) :+ B.Opcode.End
       case T.Expr.If(name, sig, thn, els) =>
         val newSpace = spaces.copy(branches = spaces.branches + name)
+        val elseExpr = if (els.isEmpty) Seq.empty else BO.Else +: expr(els, newSpace)
         BO.If(blockSig(sig)) +:
-          (expr(thn, newSpace) ++ (
-            BO.Else +:
-              expr(els, newSpace)))
+          (expr(thn, newSpace) ++ elseExpr) :+ BO.End
       case TO.Br(l) => BO.Br(resolveVar(l, spaces.branches(_)))
       case TO.BrIf(l) => BO.BrIf(resolveVar(l, spaces.branches(_)))
       case TO.BrTable(labels, default) => BO.BrTable(
@@ -262,10 +205,11 @@ object ToBinaryAst {
       case TO.GetGlobal(v) => BO.GetGlobal(resolveVar(v, spaces.globals(_)))
       case TO.SetGlobal(v) => BO.SetGlobal(resolveVar(v, spaces.globals(_)))
 
-      case TO.Load(t, ss, off, ali) => BO.Load(t,
-        ss.map { case TO.Load.SizeAndSign(size, sign) => BO.Load.SizeAndSign(size, sign) },
-        BO.MemoryImmediate(off, ali))
-      case TO.Store(t, size, off, ali) => BO.Store(t, size, BO.MemoryImmediate(off, ali))
+      case TO.Load(t, ss, off, ali) =>
+        BO.Load(t,
+          ss.map { case TO.Load.SizeAndSign(size, sign) => BO.Load.SizeAndSign(size, sign) },
+          MemoryImmediate(t, ss.map(_.size), off, ali))
+      case TO.Store(t, size, off, ali) => BO.Store(t, size, MemoryImmediate(t, size, off, ali))
       case TO.CurrentMemory => BO.CurrentMemory
       case TO.GrowMemory => BO.GrowMemory
 
@@ -321,6 +265,7 @@ object ToBinaryAst {
     val (imports, typeAndImportSpaces) = Section.Import(m.imports, typeSpaces)
     val (funcs, typeImportAndFuncSpaces) = Section.Function(m.funcs, typeAndImportSpaces)
 
+    val memories = Section.Memory(m.memory)
     val (globals, typeImportFuncAndGlobalsSpaces) = Section.Global(m.globals, typeImportAndFuncSpaces)
     val exports = Section.Export(m.exports, typeImportFuncAndGlobalsSpaces) // TODO can't export every spaces
 
@@ -331,6 +276,7 @@ object ToBinaryAst {
       BSec.Import(imports),
       BSec.Function(funcs.map(typeImportAndFuncSpaces.types(_))),
       // TODO add more
+      BSec.Memory(memories),
       BSec.Global(globals),
       BSec.Export(exports),
       // TODO add more

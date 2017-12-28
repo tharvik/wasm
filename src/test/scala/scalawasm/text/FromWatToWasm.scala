@@ -70,4 +70,9 @@ class FromWatToWasm extends FlatSpec with Matchers {
   "The import section" should "be equals to the reference" in {
     checkSameBinary("""(module (import "spectest" "print" (func)))""")
   }
+
+  "The code section" should "be equals to the reference" in {
+    checkSameBinary("""(module (func (i32.const 0) (f32.const 0.0) (f32.store)) (memory 0))""")
+    checkSameBinary("""(module (func (i32.const 64) (drop)))""")
+  }
 }

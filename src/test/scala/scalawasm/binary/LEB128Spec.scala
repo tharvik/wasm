@@ -12,6 +12,27 @@ class LEB128Spec extends FlatSpec with Matchers {
     Signed.pack(20, -624485) should be (byteStream(0x9B, 0xF1, 0x59))
   }
 
+  "dwarf examples" should "correctly translate to binary" in {
+    def packU(value: Int) = Unsigned.pack(7, value)
+    def packS(value: Int) = Signed.pack(7, value)
+
+    packU(2) should be (byteStream(2))
+    packU(127) should be (byteStream(127))
+    packU(128) should be (byteStream(0 + 0x80, 1))
+    packU(129) should be (byteStream(1 + 0x80, 1))
+    packU(130) should be (byteStream(2 + 0x80, 1))
+    packU(12857) should be (byteStream(57 + 0x80, 100))
+
+    packS(2) should be (byteStream(2))
+    packS(-2) should be (byteStream(0x7e))
+    packS(127) should be (byteStream(127 + 0x80, 0))
+    packS(-127) should be (byteStream(1 + 0x80, 0x7f))
+    packS(128) should be (byteStream(0 + 0x80, 1))
+    packS(-128) should be (byteStream(0 + 0x80, 0x7f))
+    packS(128) should be (byteStream(1 + 0x80, 1))
+    packS(-128) should be (byteStream(0x7f + 0x80, 0x7e))
+  }
+
   "wasm types" should "correctly translate to binary" in {
     def pack(value: Int) = Signed.pack(7, value)
 

@@ -47,6 +47,7 @@ object LEB128 {
         })) reverse
     }
 
+
     def unpack(stream: Seq[Byte]): Long =
       (Stream.from(0, 7) zip stream) map { case (shift, e) =>
         (e & 0x7f).toLong << shift
@@ -69,6 +70,7 @@ object LEB128 {
     def uint32(value: Int): uint = uint(32, value)
     def uint64(value: Long): uint = uint(64, value)
 
+
     // TODO not in LEB128
     case class uint(numberOfBits: Int, value: Long) {
       val pack: Stream[Byte] =
@@ -76,6 +78,10 @@ object LEB128 {
           i => (value >> (i * 8)) toByte
         } toStream
     }
+
+    // TODO quirk
+    def varuint32CompatPack(value: Long): Stream[Byte] =
+      ((0 to 3).map { i: Int => (((value >> (i * 7)) & 0x7F) | 0x80).toByte } :+ 0x00.toByte).toStream
 
     case class varuint(size: Int, value: Long) {
       require(0 <= value && value <= pow(2, size) - 1)
