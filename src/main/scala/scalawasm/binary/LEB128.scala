@@ -3,16 +3,8 @@ package scalawasm.binary
 import scala.math.{ceil,pow}
 
 object LEB128 {
-  private def numberOfBytes(size: Int): Int = ceil(size / 7.0) toInt
-
-  private def splitAndExtend(size: Int, value: Long): Seq[Byte] = {
-    0 until numberOfBytes(size) map { i =>
-      (value >> (i * 7) & 0x7F) toByte
-    } takeWhile { _ != 0 } reverse
-  }
-
   object Signed {
-    def pack(size: Int, value: Long): Seq[Byte] = {
+    def pack(value: Long): Seq[Byte] = {
       def signBitIsSet(v: Byte): Boolean = (v & 0x40) != 0
 
       def rec(v: Long, more: Boolean): Seq[Byte] = if (!more) Seq.empty else {
@@ -47,7 +39,7 @@ object LEB128 {
   }
 
   object Unsigned {
-    def pack(size: Int, value: Long): Seq[Byte] = {
+    def pack(value: Long): Seq[Byte] = {
       assert(value >= 0)
 
       def rec(v: Long): Seq[Byte] = {
@@ -102,13 +94,13 @@ object LEB128 {
     case class varuint(size: Int, value: Long) {
       require(0 <= value && value <= pow(2, size) - 1)
 
-      val pack: Stream[Byte] = LEB128.Unsigned.pack(size, value) toStream
+      val pack: Stream[Byte] = LEB128.Unsigned.pack(value) toStream
     }
 
     case class varint(size: Int, value: Long) {
       require(-pow(2, size - 1) <= value && value <= pow(2, size - 1) - 1)
 
-      val pack: Stream[Byte] = LEB128.Signed.pack(size, value) toStream
+      val pack: Stream[Byte] = LEB128.Signed.pack(value) toStream
     }
 
   }

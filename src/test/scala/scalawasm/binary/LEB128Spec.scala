@@ -8,13 +8,13 @@ class LEB128Spec extends FlatSpec with Matchers {
   private def byteStream(values: Int*): Stream[Byte] = values map {_.toByte} toStream
 
   "wikipedia examples" should "correctly translate to binary" in {
-    Unsigned.pack(20, 624485) should be (byteStream(0xE5, 0x8E, 0x26))
-    Signed.pack(20, -624485) should be (byteStream(0x9B, 0xF1, 0x59))
+    Unsigned.pack(624485) should be (byteStream(0xE5, 0x8E, 0x26))
+    Signed.pack(-624485) should be (byteStream(0x9B, 0xF1, 0x59))
   }
 
   "dwarf examples" should "correctly translate to binary" in {
-    def packU(value: Int) = Unsigned.pack(7, value)
-    def packS(value: Int) = Signed.pack(7, value)
+    def packU(value: Int) = Unsigned.pack(value)
+    def packS(value: Int) = Signed.pack(value)
 
     packU(2) should be (byteStream(2))
     packU(127) should be (byteStream(127))
@@ -34,7 +34,7 @@ class LEB128Spec extends FlatSpec with Matchers {
   }
 
   "wasm types" should "correctly translate to binary" in {
-    def pack(value: Int) = Signed.pack(7, value)
+    def pack(value: Int) = Signed.pack(value)
 
     pack(-0x01) should be (byteStream(0x7f))
     pack(-0x02) should be (byteStream(0x7e))
@@ -46,8 +46,8 @@ class LEB128Spec extends FlatSpec with Matchers {
   }
 
   "pipelining" should "work" in {
-    def pipeU(value: Long) = Unsigned.unpack(Unsigned.pack(20, value))
-    def pipeS(value: Long) = Signed.unpack(Signed.pack(20, value))
+    def pipeU(value: Long) = Unsigned.unpack(Unsigned.pack(value))
+    def pipeS(value: Long) = Signed.unpack(Signed.pack(value))
 
     pipeU(624485) should be (624485)
 
@@ -56,7 +56,7 @@ class LEB128Spec extends FlatSpec with Matchers {
   }
 
   "signed(1)" should "be one byte" in {
-    Signed.pack(32, 1) should be (byteStream(0x01))
+    Signed.pack(1) should be (byteStream(0x01))
   }
 }
 
