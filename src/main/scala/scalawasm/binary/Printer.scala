@@ -3,9 +3,9 @@ package scalawasm.binary
 import LEB128.{Signed => S}
 import LEB128.{Unsigned => U}
 import scala.language.{implicitConversions, postfixOps}
-import scalawasm.binary.{Decompiler => This}
+import scalawasm.binary.{Printer => This}
 
-object Decompiler {
+object Printer {
 
   type SB = Seq[Byte]
   type Checker = SB => SB
@@ -148,7 +148,7 @@ object Decompiler {
   }
 
   object Section {
-    def Type(s: SB): SB = Read.Vector(s, "func_type")(Decompiler.Type.Func)
+    def Type(s: SB): SB = Read.Vector(s, "func_type")(Printer.Type.Func)
     def Function(s: SB): SB = Read.Vector(s, "signature")(Read.VarU(_) { (log, index, tail) =>
       log(s"type $index")
       tail
@@ -163,16 +163,16 @@ object Decompiler {
           val field = new String(fieldBytes.toArray, "UTF-8")
           log(s"field = $field")
 
-          val followed = Decompiler.Type.ExternalKind(tail)
+          val followed = Printer.Type.ExternalKind(tail)
 
           tail.head match {
             case 0 => Read.VarU(followed) { (log, index, tail) =>
               log(s"type index = $index")
               tail
             }
-            case 1 => Decompiler.Type.Table(followed)
-            case 2 => Decompiler.Type.Memory(followed)
-            case 3 => Decompiler.Type.Global(followed)
+            case 1 => Printer.Type.Table(followed)
+            case 2 => Printer.Type.Memory(followed)
+            case 3 => Printer.Type.Global(followed)
           }
         }
       }
@@ -187,11 +187,11 @@ object Decompiler {
     }
 
     def Memory(s: SB): SB = Read.Vector(s, "memory") { s =>
-      Decompiler.Type.Memory(s)
+      Printer.Type.Memory(s)
     }
 
     def Global(s: SB): SB = Read.Vector(s, "global") { s =>
-      val tail = Decompiler.Type.Global(s)
+      val tail = Printer.Type.Global(s)
 
       expr(tail, "init")
     }
@@ -201,7 +201,7 @@ object Decompiler {
         val field = new String(fieldBytes.toArray, "UTF-8")
         log(s"field = $field")
 
-        val rest = Decompiler.Type.ExternalKind(tail)
+        val rest = Printer.Type.ExternalKind(tail)
         Read.VarU(rest) { (log, index, tail) =>
           log(s"index = $index")
           tail

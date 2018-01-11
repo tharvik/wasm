@@ -8,7 +8,7 @@ import org.scalatest._
 import scala.io.Source.fromFile
 import scala.sys.process._
 import scalawasm.Main.pipe
-import scalawasm.binary.Decompiler
+import scalawasm.binary.Printer
 import scalawasm.right
 
 class FromWatToWasm extends FlatSpec with Matchers {
@@ -27,9 +27,8 @@ class FromWatToWasm extends FlatSpec with Matchers {
 
     val ref = getReferenceBinary(text)
     val (o, r) = (own.asInstanceOf[Right[Any, List[Byte]]].value, ref)
-    Decompiler.check(o)
-    println("--")
-    Decompiler.check(r)
+    Printer.check(o)
+    Printer.check(r)
     o should be (r)
   }
 

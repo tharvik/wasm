@@ -4,27 +4,47 @@ import java.io.File
 import java.nio.file._
 
 import scala.io.Source.fromFile
-import scalawasm.binary.{ToBinary, ToBinaryAst}
+import scala.language.postfixOps
+import scalawasm.binary.{Printer, ToBinary, ToBinaryAst}
 import scalawasm.text._
 
 object Main extends App {
+  def pipe(text: String) = for {
+    l <- Lexer(text)
+    ast <- Parser(l)
+    p <- ToBinaryAst(ast)
+  } yield ToBinary(p)
 
-  def pipe(text: String): Either[ParsingError, Stream[Byte]] = for {
-      l <- Lexer(text)
-      ast <- Parser(l)
-      p <- ToBinaryAst(ast)
-    } yield ToBinary(p)
-
-    args foreach { filename =>
-      val in = new File(filename)
-      val content = fromFile(in).mkString
+  def compile(filename: String): Unit = {
+    val in = new File(filename)
+    val content = fromFile(in).mkString
     pipe(content) match {
       case Right(bytes) =>
-        val path = Paths.get(s"${in.getName}.wasm")
-        println(bytes.toList)
+        val name = in.getName.split("\\.").init.mkString
+        val path = Paths.get(s"$name.wasm")
         Files.write(path, bytes.toArray)
       case Left(msg) =>
         println(s"error wasming $filename: $msg")
+    }
+  }
+
+  def print(filename: String): Unit = {
+    val in = new File(filename)
+    val bytes = Files.readAllBytes(Paths get in.getAbsolutePath) toStream
+
+    Printer.check(bytes)
+  }
+
+  if (args.length == 0) {
+    println("not args defined")
+  } else {
+    val action = args.head match {
+      case "compile" => compile _
+      case "print" => print _
+    }
+
+    args.tail foreach { filename =>
+      action(filename)
     }
   }
 }
