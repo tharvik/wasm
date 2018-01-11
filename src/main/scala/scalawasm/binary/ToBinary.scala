@@ -254,9 +254,9 @@ object ToBinary {
       case BSec.Export(exports) =>
         (Some(7), exports, varuint32(exports.length).pack #:::
           exports.flatMap { case (field, k, i) => pack(field) #::: toBinary(k) #::: varuint32(i).pack }.toStream)
-      /*case AS.Start(index) =>
-        varuint32(index).pack
-      case AS.Element(entries) =>
+      case BSec.Start(start) =>
+        (Some(8), start.toList, if (start.isDefined) varuint32(start.get).pack else Stream.empty)
+      /*case AS.Element(entries) =>
         varuint32(entries.size).pack #:::
           (entries flatMap { toBinary } toStream)*/
       case BSec.Code(codes) =>

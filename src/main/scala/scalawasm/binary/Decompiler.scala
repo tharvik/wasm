@@ -2,6 +2,7 @@ package scalawasm.binary
 
 import LEB128.{Signed => S}
 import LEB128.{Unsigned => U}
+import scala.language.{implicitConversions, postfixOps}
 import scalawasm.binary.{Decompiler => This}
 
 object Decompiler {
@@ -14,8 +15,6 @@ object Decompiler {
 
     println(f"$hex%30s\t$msg")
   }
-
-  private def out(msg: String): Unit = println((" " * 20) + s"\t$msg")
 
   object Read {
     type Log = String => Unit
@@ -183,7 +182,7 @@ object Decompiler {
       val endOp = 0x0b toByte
 
       val expr = s.takeWhile(_ != endOp) :+ endOp
-      out(expr, s"<$msg expr>") // TODO describe further
+      out(expr, s"<$msg expr>")
       s.dropWhile(_ != endOp).tail
     }
 
@@ -208,6 +207,11 @@ object Decompiler {
           tail
         }
       }
+    }
+
+    def Start(s: SB): SB = Read.VarU(s) {(log, index, tail) =>
+      log(s"start with func $index")
+      tail
     }
 
     def Code(s: SB): SB = Read.Vector(s, "function body") { s =>
@@ -237,6 +241,7 @@ object Decompiler {
         case 5 => ("Memory", Section.Memory)
         case 6 => ("Global", Section.Global)
         case 7 => ("Export", Section.Export)
+        case 8 => ("Start", Section.Start)
 
         case 10 => ("Code", Section.Code)
       }

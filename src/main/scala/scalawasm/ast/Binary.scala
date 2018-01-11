@@ -31,7 +31,7 @@ object Binary {
     final case class GetGlobal(index: Int) extends Opcode
     final case class SetGlobal(index: Int) extends Opcode
 
-    final case class MemoryImmediate(align: Int, offset: Long) extends Opcode
+    final case class MemoryImmediate(align: Int, offset: Long)
     final case class Load(type_ : Type, sizeAndSize: Option[Load.SizeAndSign], memoryImmediate: MemoryImmediate) extends Opcode
     object Load {
       final case class SizeAndSign(size: Long, sign: Sign)
@@ -105,6 +105,7 @@ object Binary {
     case class Memory(memories: Seq[Signature.Memory]) extends Section
     case class Global(globals: Seq[(Signature.Global, Seq[Opcode])]) extends Section
     case class Export(exports: Seq[(String, Kind, Int)]) extends Section
+    case class Start(start: Option[Int]) extends Section
     // TODO add more
     case class Code(codes: Seq[(Seq[(Int, AT.Value)], Seq[Opcode])]) extends Section
   }

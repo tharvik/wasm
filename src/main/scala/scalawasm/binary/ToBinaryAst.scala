@@ -149,6 +149,10 @@ object ToBinaryAst {
         }.merge.toInt // TODO toInt
       (e.field, e.kind, index)
     }
+
+    def Start(start: Option[T.Start], spaces: Spaces): Option[Int] = start.map { s =>
+      s.var_.id.map { n: String => spaces.funcs(n).toLong }.merge.toInt // TODO toInt
+    }
   }
 
   private def expr(e: Seq[T.Expr], spaces: Spaces): Seq[B.Opcode] = e.flatMap(op(_, spaces))
@@ -268,6 +272,7 @@ object ToBinaryAst {
     val memories = Section.Memory(m.memory)
     val (globals, typeImportFuncAndGlobalsSpaces) = Section.Global(m.globals, typeImportAndFuncSpaces)
     val exports = Section.Export(m.exports, typeImportFuncAndGlobalsSpaces) // TODO can't export every spaces
+    val start = Section.Start(m.start, typeImportAndFuncSpaces)
 
     val codes = Section.Code(m.funcs, typeImportFuncAndGlobalsSpaces)
 
@@ -279,6 +284,7 @@ object ToBinaryAst {
       BSec.Memory(memories),
       BSec.Global(globals),
       BSec.Export(exports),
+      BSec.Start(start),
       // TODO add more
       BSec.Code(codes),
     )

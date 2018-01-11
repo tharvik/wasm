@@ -365,6 +365,6 @@
     (drop)
   )
 
-  (export "Arithmetic_main" (func $Arithmetic_main))
   (global (mut i32) (i32.const 0))
+  (start $Arithmetic_main)
 )
