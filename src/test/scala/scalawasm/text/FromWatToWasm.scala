@@ -6,6 +6,7 @@ import java.nio.file.{Files, Paths}
 import org.scalatest._
 
 import scala.io.Source.fromFile
+import scala.language.postfixOps
 import scala.sys.process._
 import scalawasm.Main.pipe
 import scalawasm.binary.Printer

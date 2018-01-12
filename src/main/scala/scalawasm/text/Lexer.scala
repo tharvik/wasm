@@ -1,5 +1,6 @@
 package scalawasm.text
 
+import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
 import scalawasm.ast.Token
 import scalawasm.ast.Token._
@@ -9,7 +10,7 @@ import scalawasm.ast.Token._
 object Lexer extends RegexParsers {
   override def skipWhitespace = true
   // TODO handle multi lines comments
-  override val whiteSpace = "([ \n\t\r\f]|;;.*\n)+".r
+  override val whiteSpace: Regex = "([ \n\t\r\f]|;;.*\n)+".r
 
   // TODO int/float lexer is to redo
   private def intlit = positioned {
@@ -133,25 +134,22 @@ object Lexer extends RegexParsers {
 
   private def module = positioned { "module" ^^^ MODULE }
 
-  private def tokenLoad = load ||| load8 ||| load16 ||| load32
-  private def tokenStore = store ||| store8 ||| store16 ||| store32
-  private def tokenEq = eq ||| eqz
-  private def tokenCall = call ||| call_indirect
-  private def tokenNe = ne ||| neg
-  private def tokenGe = ge ||| get_local ||| get_global
-  private def tokenValue = intlit ||| floatlit
-  private def part1 = name | stringlit | lbrace | rbrace | lparen | rparen | dot | slash | i32 | i64 | f32 | f64 |
-      anyfunc | add | and | clz | ctz | div | extend | gt |
-      le | lt | mul | or | popcnt | reinterpretfloat | rem | rotl | rotr | shl | shr | sub |
-      trunc | wrap | xor | offset | align | type_ | mut | block | loop | if_ |
-      convert
-  private def part2 = module |
-      then_ | else_ | end | unreachable | nop | br | br_if | br_table | return_ | drop | select |
-      get_local | set_local | tee_local | get_global | set_global | current_memory | grow_memory | const | func |
-      param | result | local | global | table | elem | memory | data | start | typedef | import_ | export |
-      module | equal | unsigned | signed | tokenLoad | tokenEq | tokenCall | tokenStore |
-      tokenNe | tokenGe | tokenValue
-  private def token = part1 | part2
+  private def token = abs | add | align | and | anyfunc | block | ceil | clz | const | convert | copysign | ctz |
+    current_memory | data | div | dot | drop | elem | else_ | end | equal | export | extend | f32 | f64 | floor | func |
+    global | grow_memory | gt | i32 | i64 | if_ | import_ | lbrace | le | local | loop | lparen | lt | max | memory |
+    min | module | mul | mut | name | nearest | nop | offset | or | param | popcnt | rbrace | reinterpretfloat | rem |
+    result | return_ | rotl | rotr | rparen | select | shl | shr | signed | slash | sqrt | start | stringlit | sub |
+    table | tee_local | then_ | trunc | unreachable | unsigned | wrap | xor |
+    ( intlit ||| floatlit ) |
+    ( br ||| br_if ||| br_table ) |
+    ( call ||| call_indirect ) |
+    ( eq ||| eqz ) |
+    ( ge ||| get_local ||| get_global ) |
+    ( load ||| load8 ||| load16 ||| load32 ) |
+    ( ne ||| neg ) |
+    ( set_local ||| set_global ) |
+    ( store ||| store8 ||| store16 ||| store32 ) |
+    ( type_ ||| typedef )
 
   private def tokens: Parser[List[Token]] = phrase(rep1(token))
 

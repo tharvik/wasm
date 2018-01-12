@@ -1,5 +1,6 @@
 package scalawasm.text
 
+import scala.language.postfixOps
 import scala.util.parsing.combinator.Parsers
 import scalawasm.ast._
 import scalawasm.ast.Tree.Opcode._

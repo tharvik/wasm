@@ -32,7 +32,7 @@ object Spaces {
   trait OptStringBasicSpace extends ForStringBasicSpace[Option[String]] {
     type OS = Option[String]
 
-    val tr = Some(_)
+    val tr: String => Option[String] = Some(_)
     val impl: Seq[OS] => implType
     val add: (Seq[OS], OS) => Seq[OS]
 
@@ -40,11 +40,11 @@ object Spaces {
   }
 
   trait ForwardOptStringBasicSpace extends OptStringBasicSpace {
-    val add = { (s: Seq[OS], o: OS) => s :+ o }
+    val add: (Seq[OS], OS) => Seq[OS] = { (s: Seq[OS], o: OS) => s :+ o }
   }
 
   trait ReverseOptStringBasicSpace extends OptStringBasicSpace {
-    val add = { (s: Seq[OS], o: OS) => o +: s }
+    val add: (Seq[OS], OS) => Seq[OS] = { (s: Seq[OS], o: OS) => o +: s }
   }
 
   case class TypeSpace(seq: Seq[BSig.Function] = Seq.empty, map: Map[String, Int] = Map.empty) {
@@ -62,32 +62,32 @@ object Spaces {
   }
 
   case class FunctionSpace(seq: Seq[Option[String]] = Seq.empty) extends ForwardOptStringBasicSpace {
-    override val impl = FunctionSpace
+    override val impl: Seq[OS] => FunctionSpace = FunctionSpace
     override type implType = FunctionSpace
   }
 
   case class GlobalSpace(seq: Seq[Option[String]] = Seq.empty) extends ForwardOptStringBasicSpace {
-    override val impl = GlobalSpace
+    override val impl: Seq[OS] => GlobalSpace = GlobalSpace
     override type implType = GlobalSpace
   }
 
   case class MemorySpace(seq: Seq[Option[String]] = Seq.empty) extends ForwardOptStringBasicSpace {
-    override val impl = MemorySpace
+    override val impl: Seq[OS] => MemorySpace = MemorySpace
     override type implType = MemorySpace
   }
 
   case class TableSpace(seq: Seq[Option[String]] = Seq.empty) extends ForwardOptStringBasicSpace {
-    override val impl = TableSpace
+    override val impl: Seq[OS] => TableSpace = TableSpace
     override type implType = TableSpace
   }
 
   case class LocalSpace(seq: Seq[Option[String]] = Seq.empty) extends ForwardOptStringBasicSpace {
-    override val impl = LocalSpace
+    override val impl: Seq[OS] => LocalSpace = LocalSpace
     override type implType = LocalSpace
   }
 
   case class BranchSpace(seq: Seq[Option[String]] = Seq.empty) extends ReverseOptStringBasicSpace {
-    override val impl = BranchSpace
+    override val impl: Seq[OS] => BranchSpace = BranchSpace
     override type implType = BranchSpace
   }
 }

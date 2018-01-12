@@ -1,5 +1,6 @@
 package scalawasm.binary
 
+import scala.language.postfixOps
 import scalawasm.Config.enableSpecCompat
 import scalawasm.ast.Binary.Opcode.Load.SizeAndSign
 import scalawasm.ast.Binary.Opcode._

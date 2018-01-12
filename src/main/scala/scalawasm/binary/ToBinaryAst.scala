@@ -1,6 +1,7 @@
 package scalawasm.binary
 
 import scala.annotation.tailrec
+import scala.language.{implicitConversions, postfixOps}
 import scalawasm.ast.Binary.{Section => BSec, Signature => BSig}
 import scalawasm.ast.Tree.{Signature => TSig}
 import scalawasm.ast.{Binary => B, Tree => T}
@@ -52,7 +53,7 @@ object ToBinaryAst {
       @tailrec
       def loop(cur: Seq[T], ret: Seq[T]): Seq[T] = cur match {
           case Nil =>
-            assert(ret.size <= seq.size)
+            assert(ret.lengthCompare(seq.size) <= 0)
             ret
           case head :: tail =>
             loop(tail,

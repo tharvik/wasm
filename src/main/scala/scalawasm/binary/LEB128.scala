@@ -1,6 +1,7 @@
 package scalawasm.binary
 
-import scala.math.{ceil,pow}
+import scala.language.postfixOps
+import scala.math.{ceil, pow}
 
 object LEB128 {
   object Signed {
@@ -47,7 +48,6 @@ object LEB128 {
         val nextV = v >> 7
 
         val toEmit = if (nextV != 0) (byte | 0x80).toByte else byte
-        def next = rec(nextV)
 
         toEmit +: (if (nextV != 0) rec(nextV) else Seq.empty)
       }
