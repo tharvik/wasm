@@ -32,68 +32,68 @@ object Binary {
     final case class SetGlobal(index: Int) extends Opcode
 
     final case class MemoryImmediate(align: Int, offset: Long)
-    final case class Load(type_ : Type, sizeAndSize: Option[Load.SizeAndSign], memoryImmediate: MemoryImmediate) extends Opcode
+    final case class Load(type_ : Type.Value, sizeAndSize: Option[Load.SizeAndSign], memoryImmediate: MemoryImmediate) extends Opcode
     object Load {
       final case class SizeAndSign(size: Long, sign: Sign)
     }
-    final case class Store(type_ : Type, size: Option[Long], memoryImmediate: MemoryImmediate) extends Opcode
+    final case class Store(type_ : Type.Value, size: Option[Long], memoryImmediate: MemoryImmediate) extends Opcode
     final case object CurrentMemory extends Opcode
     final case object GrowMemory extends Opcode
 
-    final case class Const(type_ : Type, value: Value) extends Opcode
+    final case class Const(type_ : Type.Value, value: Value) extends Opcode
 
     // integer unary
-    final case class CountLeadingZeros(type_ : Type) extends Opcode
-    final case class CountTrailingZeros(type_ : Type) extends Opcode
-    final case class CountNumberOneBits(type_ : Type) extends Opcode
+    final case class CountLeadingZeros(type_ : Type.Value) extends Opcode
+    final case class CountTrailingZeros(type_ : Type.Value) extends Opcode
+    final case class CountNumberOneBits(type_ : Type.Value) extends Opcode
 
     // integer binary
-    final case class Add(type_ : Type) extends Opcode
-    final case class Substract(type_ : Type) extends Opcode
-    final case class Multiply(type_ : Type) extends Opcode
+    final case class Add(type_ : Type.Value) extends Opcode
+    final case class Substract(type_ : Type.Value) extends Opcode
+    final case class Multiply(type_ : Type.Value) extends Opcode
     // TODO Option[Sign] is for float where sign is meaningless
-    final case class Divide(type_ : Type, sign: Option[Sign]) extends Opcode
-    final case class Remainder(type_ : Type, sign: Sign) extends Opcode
-    final case class And(type_ : Type) extends Opcode
-    final case class Or(type_ : Type) extends Opcode
-    final case class Xor(type_ : Type) extends Opcode
-    final case class ShiftLeft(type_ : Type) extends Opcode
-    final case class ShiftRight(type_ : Type, sign: Sign) extends Opcode
-    final case class RotateLeft(type_ : Type) extends Opcode
-    final case class RotateRight(type_ : Type) extends Opcode
+    final case class Divide(type_ : Type.Value, sign: Option[Sign]) extends Opcode
+    final case class Remainder(type_ : Type.Value, sign: Sign) extends Opcode
+    final case class And(type_ : Type.Value) extends Opcode
+    final case class Or(type_ : Type.Value) extends Opcode
+    final case class Xor(type_ : Type.Value) extends Opcode
+    final case class ShiftLeft(type_ : Type.Value) extends Opcode
+    final case class ShiftRight(type_ : Type.Value, sign: Sign) extends Opcode
+    final case class RotateLeft(type_ : Type.Value) extends Opcode
+    final case class RotateRight(type_ : Type.Value) extends Opcode
 
     // integer test unary
-    final case class EqualZero(type_ : Type) extends Opcode
+    final case class EqualZero(type_ : Type.Value) extends Opcode
 
     // integer test binary
-    final case class Equal(type_ : Type) extends Opcode
-    final case class NotEqual(type_ : Type) extends Opcode
-    final case class LessThan(type_ : Type, sign: Option[Sign]) extends Opcode
-    final case class GreaterThan(type_ : Type, sign: Option[Sign]) extends Opcode
-    final case class LessOrEqual(type_ : Type, sign: Option[Sign]) extends Opcode
-    final case class GreaterOrEqual(type_ : Type, sign: Option[Sign]) extends Opcode
+    final case class Equal(type_ : Type.Value) extends Opcode
+    final case class NotEqual(type_ : Type.Value) extends Opcode
+    final case class LessThan(type_ : Type.Value, sign: Option[Sign]) extends Opcode
+    final case class GreaterThan(type_ : Type.Value, sign: Option[Sign]) extends Opcode
+    final case class LessOrEqual(type_ : Type.Value, sign: Option[Sign]) extends Opcode
+    final case class GreaterOrEqual(type_ : Type.Value, sign: Option[Sign]) extends Opcode
 
     // float unary
-    final case class Absolute(type_ : Type) extends Opcode
-    final case class Negative(type_ : Type) extends Opcode
-    final case class Ceiling(type_ : Type) extends Opcode
-    final case class Floor(type_ : Type) extends Opcode
-    final case class Nearest(type_ : Type) extends Opcode
-    final case class Sqrt(type_ : Type) extends Opcode
+    final case class Absolute(type_ : Type.Value) extends Opcode
+    final case class Negative(type_ : Type.Value) extends Opcode
+    final case class Ceiling(type_ : Type.Value) extends Opcode
+    final case class Floor(type_ : Type.Value) extends Opcode
+    final case class Nearest(type_ : Type.Value) extends Opcode
+    final case class Sqrt(type_ : Type.Value) extends Opcode
 
     // float binary
-    final case class Min(type_ : Type) extends Opcode
-    final case class Max(type_ : Type) extends Opcode
-    final case class CopySign(type_ : Type) extends Opcode
+    final case class Min(type_ : Type.Value) extends Opcode
+    final case class Max(type_ : Type.Value) extends Opcode
+    final case class CopySign(type_ : Type.Value) extends Opcode
 
     // conv
-    final case class Wrap(from: Type, to: Type) extends Opcode
-    final case class Extend(from: Type, to: Type, sign: Sign) extends Opcode
-    final case class Truncate(from: Type, to: Type, sign: Sign) extends Opcode
-    final case class Demote(from: Type, to: Type) extends Opcode
-    final case class Promote(from: Type, to: Type) extends Opcode
-    final case class Convert(from: Type, to: Type, sign: Sign) extends Opcode
-    final case class Reinterpret(from: Type, to: Type) extends Opcode
+    final case class Wrap(from: Type.Value, to: Type.Value) extends Opcode
+    final case class Extend(from: Type.Value, to: Type.Value, sign: Sign) extends Opcode
+    final case class Truncate(from: Type.Value, to: Type.Value, sign: Sign) extends Opcode
+    final case class Demote(from: Type.Value, to: Type.Value) extends Opcode
+    final case class Promote(from: Type.Value, to: Type.Value) extends Opcode
+    final case class Convert(from: Type.Value, to: Type.Value, sign: Sign) extends Opcode
+    final case class Reinterpret(from: Type.Value, to: Type.Value) extends Opcode
   }
 
   sealed trait Section

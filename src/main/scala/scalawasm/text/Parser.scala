@@ -37,7 +37,7 @@ object Parser extends Parsers {
     | F64 ^^^ Type.f64 )
   private def elem_type = ANYFUNC ^^^ Type.AnyFunction
 
-  private def unop: Parser[Type => Opcode] =
+  private def unop: Parser[Type.Value => Opcode] =
   ( CTZ ^^^ CountTrailingZeros
   | CLZ ^^^ CountLeadingZeros
   | POPCNT ^^^ CountNumberOneBits
@@ -47,27 +47,27 @@ object Parser extends Parsers {
   | CEIL ^^^ Ceiling
   | FLOOR ^^^ Floor
   | NEAREST ^^^ Nearest )
-  private def binop: Parser[Type => Opcode] =
+  private def binop: Parser[Type.Value => Opcode] =
     ( ADD ^^^ Add
     | SUB ^^^ Substract
     | MUL ^^^ Multiply
-    | DIV ~> sign ^^ { s => { t: Type => Divide(t, Some(s)) } }
-    | REM ~> sign ^^ { s => { t: Type => Remainder(t, s) } }
+    | DIV ~> sign ^^ { s => { t: Type.Value => Divide(t, Some(s)) } }
+    | REM ~> sign ^^ { s => { t: Type.Value => Remainder(t, s) } }
     | AND ^^^ And
     | OR ^^^ Or
     | XOR ^^^ Xor
     | SHL ^^^ ShiftLeft
-    | SHR ~> sign ^^ { s => { t: Type => ShiftRight(t, s) } }
+    | SHR ~> sign ^^ { s => { t: Type.Value => ShiftRight(t, s) } }
     | ROTL ^^^ RotateLeft
     | ROTR ^^^ RotateRight )
-  private def relop: Parser[Type => Opcode] =
+  private def relop: Parser[Type.Value => Opcode] =
     ( EQ ^^^ Equal
     | NE ^^^ NotEqual
     | EQZ ^^^ EqualZero
-    | LT ~> opt(sign) ^^ { s => { t: Type => LessThan(t, s) } }
-    | GT ~> opt(sign) ^^ { s => { t: Type => GreaterThan(t, s) } }
-    | LE ~> opt(sign) ^^ { s => { t: Type => LessOrEqual(t, s) } }
-    | GE ~> opt(sign) ^^ { s => { t: Type => GreaterOrEqual(t, s) } } )
+    | LT ~> opt(sign) ^^ { s => { t: Type.Value => LessThan(t, s) } }
+    | GT ~> opt(sign) ^^ { s => { t: Type.Value => GreaterThan(t, s) } }
+    | LE ~> opt(sign) ^^ { s => { t: Type.Value => LessOrEqual(t, s) } }
+    | GE ~> opt(sign) ^^ { s => { t: Type.Value => GreaterOrEqual(t, s) } } )
   private def sign: Parser[Sign] =
     ( UNSIGNED ^^^ Sign.Unsigned
     | SIGNED ^^^ Sign.Signed )

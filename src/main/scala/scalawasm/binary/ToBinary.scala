@@ -89,7 +89,7 @@ object ToBinary {
 
   private def toBinary(expr: Seq[B.Opcode]): Stream[Byte] = expr.flatMap(toBinary).toStream
   private def toBinary(opcode: B.Opcode): Stream[Byte] = {
-    def typeOffset(t: AT): Int = t match {
+    def typeOffset(t: AT.Value): Int = t match {
       case AT.i32 => 0
       case AT.i64 => 1
       case AT.f32 => 2
@@ -101,11 +101,11 @@ object ToBinary {
       case A.Sign.Unsigned => 1
     }
 
-    def opTypeOffset(t: AT, ids: Int*) = op(ids(typeOffset(t)))
-    def opTypeOffsetFloat(t: AT, ids: Int*) = op(ids(typeOffset(t) - 2))
-    def opTypeOffsetInt(t: AT, ids: Int*) = opTypeOffset(t, ids:_*)
-    def opTypeAndSignOffsetInt(t: AT, s: A.Sign, ids: Int*) = op(ids(typeOffset(t)) + signOffset(s))
-    def opTypeAndSignOffsetFloat(t: AT, s: A.Sign, ids: Int*) = op(ids(typeOffset(t) - 2) + signOffset(s))
+    def opTypeOffset(t: AT.Value, ids: Int*) = op(ids(typeOffset(t)))
+    def opTypeOffsetFloat(t: AT.Value, ids: Int*) = op(ids(typeOffset(t) - 2))
+    def opTypeOffsetInt(t: AT.Value, ids: Int*) = opTypeOffset(t, ids:_*)
+    def opTypeAndSignOffsetInt(t: AT.Value, s: A.Sign, ids: Int*) = op(ids(typeOffset(t)) + signOffset(s))
+    def opTypeAndSignOffsetFloat(t: AT.Value, s: A.Sign, ids: Int*) = op(ids(typeOffset(t) - 2) + signOffset(s))
 
     def op(id: Int) = uint8(id toByte).pack
 

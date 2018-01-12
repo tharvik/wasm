@@ -169,7 +169,7 @@ object ToBinaryAst {
     def blockSig(seq: Seq[A.Type.Block]): A.Type.Block =
       seq.headOption.getOrElse(A.Type.Empty)
 
-    def MemoryImmediate(t: A.Type, s: Option[Long], align: Long, offset: Long): BO.MemoryImmediate = {
+    def MemoryImmediate(t: A.Type.Value, s: Option[Long], align: Long, offset: Long): BO.MemoryImmediate = {
       val computedAlign: Int = s.fold(t match {
         case A.Type.i32 | A.Type.f32 => 4
         case A.Type.i64 | A.Type.f64 => 8
