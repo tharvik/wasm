@@ -9,6 +9,7 @@ import scala.io.Source.fromFile
 import scala.language.postfixOps
 import scala.sys.process._
 import scalawasm.Main.pipe
+import scalawasm.Config.enableSpecCompat
 import scalawasm.binary.Printer
 import scalawasm.right
 
@@ -22,15 +23,18 @@ class FromWatToWasm extends FlatSpec with Matchers {
     Files.readAllBytes(Paths get f.getAbsolutePath) toStream
   }
 
-  private def checkSameBinary(text: String) = {
+  private def checkBinary(text: String) = {
     val own = pipe(text).map(_.toList)
     own should be (right)
 
-    val ref = getReferenceBinary(text)
-    val (o, r) = (own.asInstanceOf[Right[Any, List[Byte]]].value, ref)
+    val o = own.asInstanceOf[Right[Any, List[Byte]]].value
     Printer.check(o)
-    Printer.check(r)
-    o should be (r)
+
+    if (enableSpecCompat) {
+      val ref = getReferenceBinary(text)
+      val (o, r) = (own.asInstanceOf[Right[Any, List[Byte]]].value, ref)
+      o should be (r)
+    }
   }
 
   private def readTestData(filename: String): String = fromFile(s"test-data/$filename").mkString
@@ -42,23 +46,23 @@ class FromWatToWasm extends FlatSpec with Matchers {
 
   coreTestFiles foreach { f =>
     registerTest(f.getName) {
-      checkSameBinary(readTestData(f.getName))
+      checkBinary(readTestData(f.getName))
     }
   }
 
-  "The empty module" should "be equals to the reference" in {
-    checkSameBinary("(module)")
+  "The empty module" should "translate" in {
+    checkBinary("(module)")
   }
 
-  "The Arithmetic module" should "be equals to the reference" in {
-    checkSameBinary(readTestData("Arithmetic.wat"))
+  "The Arithmetic module" should "translate" in {
+    checkBinary(readTestData("Arithmetic.wat"))
   }
 
-  "The type section" should "be equals to the reference" in {
-    checkSameBinary("(module (type (func)))")
-    checkSameBinary("(module (type (func (param))))")
-    checkSameBinary("(module (type (func (param $x i32))))")
-    checkSameBinary(
+  "The type section" should "translate" in {
+    checkBinary("(module (type (func)))")
+    checkBinary("(module (type (func (param))))")
+    checkBinary("(module (type (func (param $x i32))))")
+    checkBinary(
       """
         |(module
         |  (type $t (func))
@@ -67,12 +71,12 @@ class FromWatToWasm extends FlatSpec with Matchers {
       """.stripMargin)
   }
 
-  "The import section" should "be equals to the reference" in {
-    checkSameBinary("""(module (import "spectest" "print" (func)))""")
+  "The import section" should "translate" in {
+    checkBinary("""(module (import "spectest" "print" (func)))""")
   }
 
-  "The code section" should "be equals to the reference" in {
-    checkSameBinary("""(module (func (i32.const 0) (f32.const 0.0) (f32.store)) (memory 0))""")
-    checkSameBinary("""(module (func (i32.const 64) (drop)))""")
+  "The code section" should "translate" in {
+    checkBinary("""(module (func (i32.const 0) (f32.const 0.0) (f32.store)) (memory 0))""")
+    checkBinary("""(module (func (i32.const 64) (drop)))""")
   }
 }
