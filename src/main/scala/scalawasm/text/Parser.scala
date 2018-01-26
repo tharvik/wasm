@@ -132,7 +132,7 @@ object Parser extends Parsers {
     | BR_TABLE ~> rep1(var_) ^^ { vars => Opcode.BrTable(vars.init, vars.last) }
     | RETURN ^^^ Opcode.Return
     | CALL ~> var_ ^^ Opcode.Call
-    | CALL_INDIRECT ~> func_sig_without_type ^^ Opcode.CallIndirect // TODO without_type?
+    | CALL_INDIRECT ~> func_sig ^^ { case t ~ sig => Opcode.CallIndirect(t, sig) }
     | DROP ^^^ Opcode.Drop
     | SELECT ^^^ Opcode.Select
     | GET_LOCAL ~> var_ ^^ Opcode.GetLocal
@@ -214,7 +214,7 @@ object Parser extends Parsers {
 
   def apply(tokens: Seq[Token]): Either[ParsingError, Module] = {
     val reader = new TokenReader(tokens)
-    val parser: Parser[Module] = if (enableSpecCompat) moduleSpecCompat else module
+    val parser: Parser[Module] = moduleSpecCompat
     parser(reader) match {
       case NoSuccess(msg, next) => Left(ParsingError(msg, next.pos))
       case Success(result, _) => Right(result)

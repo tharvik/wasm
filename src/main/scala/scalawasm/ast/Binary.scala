@@ -101,13 +101,14 @@ object Binary {
     case class Type(types: Seq[Signature.Function]) extends Section
     case class Import(imports: Seq[Signature.Import]) extends Section
     case class Function(indexes: Seq[Int]) extends Section
-    // TODO add more
+    case class Table(tables: Seq[Signature.Table]) extends Section
     case class Memory(memories: Seq[Signature.Memory]) extends Section
     case class Global(globals: Seq[(Signature.Global, Seq[Opcode])]) extends Section
     case class Export(exports: Seq[(String, Kind, Int)]) extends Section
     case class Start(start: Option[Int]) extends Section
-    // TODO add more
+    case class Element(elements: Seq[(Int, Seq[Opcode], Seq[Int])]) extends Section
     case class Code(codes: Seq[(Seq[(Int, AT.Value)], Seq[Opcode])]) extends Section
+    // TODO add more
   }
 
   type TypeIndex = Int

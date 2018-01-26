@@ -243,9 +243,9 @@ object ToBinary {
       case BSec.Function(indexes) =>
         (Some(3), indexes, varuint32(indexes.length).pack #:::
           indexes.map(_.toByte).toStream)
-      /*case AS.Table(entries) =>
-        varuint32(entries.length).pack #:::
-          (entries flatMap { B.Type.toBinary } toStream)*/
+      case BSec.Table(tables) =>
+        (Some(4), tables, varuint32(tables.length).pack #:::
+          tables.flatMap { t => Signature.toBinary(t) }.toStream)
       case BSec.Memory(memories) =>
         (Some(5), memories, varuint32(memories.length).pack #:::
           memories.flatMap { m => Signature.toBinary(m) }.toStream)
@@ -257,9 +257,15 @@ object ToBinary {
           exports.flatMap { case (field, k, i) => pack(field) #::: toBinary(k) #::: varuint32(i).pack }.toStream)
       case BSec.Start(start) =>
         (Some(8), start.toList, if (start.isDefined) varuint32(start.get).pack else Stream.empty)
-      /*case AS.Element(entries) =>
-        varuint32(entries.size).pack #:::
-          (entries flatMap { toBinary } toStream)*/
+      case BSec.Element(elems) =>
+        (Some(9), elems, varuint32(elems.size).pack #:::
+          elems.flatMap { case (index, expr, indices) =>
+              varuint32(index).pack #:::
+              toBinary(expr) #:::
+              varint32(indices.size).pack #:::
+              indices.flatMap { i => varuint32(i).pack }.toStream
+          }.toStream
+        )
       case BSec.Code(codes) =>
         (Some(10), codes,
           varuint32(codes.size).pack #:::

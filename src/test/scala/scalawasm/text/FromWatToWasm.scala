@@ -54,10 +54,6 @@ class FromWatToWasm extends FlatSpec with Matchers {
     checkBinary("(module)")
   }
 
-  "The Arithmetic module" should "translate" in {
-    checkBinary(readTestData("Arithmetic.wat"))
-  }
-
   "The type section" should "translate" in {
     checkBinary("(module (type (func)))")
     checkBinary("(module (type (func (param))))")
@@ -75,8 +71,24 @@ class FromWatToWasm extends FlatSpec with Matchers {
     checkBinary("""(module (import "spectest" "print" (func)))""")
   }
 
-  "The code section" should "translate" in {
+  "The function section" should "translate" in {
     checkBinary("""(module (func (i32.const 0) (f32.const 0.0) (f32.store)) (memory 0))""")
     checkBinary("""(module (func (i32.const 64) (drop)))""")
+    checkBinary("""(module (func (f32.const 3.0) (drop)))""")
+    checkBinary(
+      """
+        |(module
+        |  (type (func))
+        |  (type (func))
+        |  (func (type 1))
+        |)
+      """.stripMargin)
+    checkBinary(
+      """
+        |(module
+        |  (func (i32.const 0) (i32.const 25) (i32.store8 align=1))
+        |  (memory 1)
+        |)
+      """.stripMargin)
   }
 }

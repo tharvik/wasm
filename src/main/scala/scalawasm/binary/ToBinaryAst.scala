@@ -88,17 +88,10 @@ object ToBinaryAst {
 
       imp match {
         case T.Import.Function(_, _, name, typeref, sig) =>
-          val index: Int = typeref.map { ref =>
-            ref.id match {
-              case Left(id) => id toInt // TODO toInt
-              case Right(n) => spaces.types.map(n)
-            }
-          }.getOrElse(spaces.types(Signature.Function(sig)))
-          assert(index >= 0)
           (BI.Function(
             imp.module,
             imp.field,
-            index),
+            resolveFuncTypeRef(spaces, typeref, sig)),
             spaces.copy(funcs = spaces.funcs + name)) // only need to add name, types is done with signature
         case T.Import.Table(_, _, name, TSig.Table(rl, t)) =>
           (BI.Table(
@@ -126,10 +119,15 @@ object ToBinaryAst {
       BSig.Memory(m.sig.resizableLimits)
     }
 
-    def Function(funcs: Seq[T.Function], spaces: Spaces): (Seq[BSig.Function], Spaces) =
-      funcs.foldLeft((Seq[BSig.Function](), spaces)) { case ((seq, s), f) =>
-        (seq :+ Signature.Function(f.sig),
-          s.copy(types = s.types + (f.name, Signature.Function(f.sig)), funcs = s.funcs + f.name)) }
+    def Function(funcs: Seq[T.Function], spaces: Spaces): (Seq[Int], Spaces) =
+      funcs.foldLeft((Seq[Int](), spaces)) { case ((seq, s), f) =>
+        val nextSpace = s.copy(types = s.types + (f.name, Signature.Function(f.sig)), funcs = s.funcs + f.name)
+        (seq :+ resolveFuncTypeRef(nextSpace, f.typeref, f.sig), nextSpace) }
+
+    def Table(table: Option[T.Table], spaces: Spaces): (Seq[BSig.Table], Spaces) =
+      table.foldLeft((Seq[BSig.Table](), spaces)) { case ((seq, s), t) =>
+        (seq :+ BSig.Table(t.sig.type_, t.sig.resizableLimits),
+          s.copy(tables = s.tables + t.name)) }
 
     def Global(globals: Seq[T.Global], spaces: Spaces): (Seq[(BSig.Global, Seq[B.Opcode])], Spaces) = {
       assert(spaces.branches.seq.isEmpty)
@@ -154,6 +152,25 @@ object ToBinaryAst {
     def Start(start: Option[T.Start], spaces: Spaces): Option[Int] = start.map { s =>
       s.var_.id.map { n: String => spaces.funcs(n).toLong }.merge.toInt // TODO toInt
     }
+
+    def Element(elems: Seq[T.Element], spaces: Spaces): Seq[(Int, Seq[B.Opcode], Seq[Int])] = elems.map { e =>
+      val index: Int = e.var_.map { ref =>
+        resolveVar(ref, spaces.tables(_))
+      }.getOrElse(0)
+
+      (index, expr(e.offset, spaces) :+ B.Opcode.End, e.vars.map { v => resolveVar(v, spaces.funcs(_)) } )
+    }
+  }
+
+  def resolveVar(v: T.Variable, space: String => Long): Int =
+    v.id.map(space).merge.toInt // TODO toInt
+
+  private def resolveFuncTypeRef(spaces: Spaces, typeref: Option[T.Variable], sig: TSig.Function) = {
+    val index: Int = typeref.map { ref =>
+      resolveVar(ref, spaces.types.map(_))
+    }.getOrElse(spaces.types(Signature.Function(sig)))
+    assert(index >= 0)
+    index
   }
 
   private def expr(e: Seq[T.Expr], spaces: Spaces): Seq[B.Opcode] = e.flatMap(op(_, spaces))
@@ -161,15 +178,12 @@ object ToBinaryAst {
     import T.{Opcode => TO}
     import B.{Opcode => BO}
 
-    def resolveVar(v: T.Variable, space: String => Long): Int =
-      v.id.map(space).merge.toInt // TODO toInt
-
     implicit def OpToSeq(op: B.Opcode): Seq[B.Opcode] = Seq(op)
 
     def blockSig(seq: Seq[A.Type.Block]): A.Type.Block =
       seq.headOption.getOrElse(A.Type.Empty)
 
-    def MemoryImmediate(t: A.Type.Value, s: Option[Long], align: Long, offset: Long): BO.MemoryImmediate = {
+    def MemoryImmediate(t: A.Type.Value, s: Option[Long], offset: Long, align: Long): BO.MemoryImmediate = {
       val computedAlign: Int = s.fold(t match {
         case A.Type.i32 | A.Type.f32 => 4
         case A.Type.i64 | A.Type.f64 => 8
@@ -199,7 +213,7 @@ object ToBinaryAst {
       case TO.Return => BO.Return
 
       case TO.Call(v) => BO.Call(resolveVar(v, spaces.funcs(_)))
-      case TO.CallIndirect(sig) => BO.CallIndirect(spaces.types(Signature.Function(sig)))
+      case TO.CallIndirect(typeref, sig) => BO.CallIndirect(resolveFuncTypeRef(spaces, typeref, sig))
 
       case TO.Drop => BO.Drop
       case TO.Select => BO.Select
@@ -269,25 +283,26 @@ object ToBinaryAst {
     val typeSpaces = Spaces.empty.copy(types = ts)
     val (imports, typeAndImportSpaces) = Section.Import(m.imports, typeSpaces)
     val (funcs, typeImportAndFuncSpaces) = Section.Function(m.funcs, typeAndImportSpaces)
-
+    val (tables, typeImportFuncAndTableSpaces) = Section.Table(m.table, typeImportAndFuncSpaces)
     val memories = Section.Memory(m.memory)
-    val (globals, typeImportFuncAndGlobalsSpaces) = Section.Global(m.globals, typeImportAndFuncSpaces)
-    val exports = Section.Export(m.exports, typeImportFuncAndGlobalsSpaces) // TODO can't export every spaces
-    val start = Section.Start(m.start, typeImportAndFuncSpaces)
-
-    val codes = Section.Code(m.funcs, typeImportFuncAndGlobalsSpaces)
+    val (globals, typeImportFuncTableAndGlobalsSpaces) = Section.Global(m.globals, typeImportFuncAndTableSpaces)
+    val exports = Section.Export(m.exports, typeImportFuncTableAndGlobalsSpaces) // TODO can't export every spaces
+    val start = Section.Start(m.start, typeImportFuncTableAndGlobalsSpaces)
+    val elements = Section.Element(m.elements, typeImportFuncTableAndGlobalsSpaces)
+    val codes = Section.Code(m.funcs, typeImportFuncTableAndGlobalsSpaces)
 
     Seq(
-      BSec.Type(typeImportFuncAndGlobalsSpaces.types.seq),
+      BSec.Type(typeImportFuncTableAndGlobalsSpaces.types.seq),
       BSec.Import(imports),
-      BSec.Function(funcs.map(typeImportAndFuncSpaces.types(_))),
-      // TODO add more
+      BSec.Function(funcs),
+      BSec.Table(tables),
       BSec.Memory(memories),
       BSec.Global(globals),
       BSec.Export(exports),
       BSec.Start(start),
-      // TODO add more
+      BSec.Element(elements),
       BSec.Code(codes),
+      // TODO add more
     )
   }
 

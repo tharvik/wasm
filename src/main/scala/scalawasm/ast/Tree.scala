@@ -30,7 +30,7 @@ object Tree {
     final case class BrTable(labels: Seq[Variable], default: Variable) extends Opcode
     final case object Return extends Opcode
     final case class Call(label: Variable) extends Opcode
-    final case class CallIndirect(sig: Signature.Function) extends Opcode
+    final case class CallIndirect(typeref: Option[Variable], sig: Signature.Function) extends Opcode
     final case object Drop extends Opcode
     final case object Select extends Opcode
     final case class GetLocal(label: Variable) extends Opcode

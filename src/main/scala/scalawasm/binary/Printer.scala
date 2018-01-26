@@ -178,6 +178,10 @@ object Printer {
       }
     }
 
+    def Table(s: SB): SB = Read.Vector(s, "table") { s =>
+      Printer.Type.Table(s)
+    }
+
     def expr(s: SB, msg: String): SB = {
       val endOp = 0x0b toByte
 
@@ -214,6 +218,20 @@ object Printer {
       tail
     }
 
+    def Element(s: SB): SB = Read.Vector(s, "element segment") { s =>
+      Read.VarU(s) { (log, index, exprAndTail) =>
+        log(s"table index = $index")
+        assert(index == 0)
+        val tail = expr(exprAndTail, "init")
+        Read.Vector(tail, "function indice") { s =>
+          Read.VarU(s) { (log, indice, tail) =>
+            log(s"$indice")
+            tail
+          }
+        }
+      }
+    }
+
     def Code(s: SB): SB = Read.Vector(s, "function body") { s =>
       Read.WithBytesLength(s, "body") { (_, body, tail) =>
         val code = Read.Vector(body, "local entry") { s =>
@@ -237,12 +255,12 @@ object Printer {
         case 1 => ("Type", Section.Type)
         case 2 => ("Import", Section.Import)
         case 3 => ("Function", Section.Function)
-
+        case 4 => ("Table", Section.Table)
         case 5 => ("Memory", Section.Memory)
         case 6 => ("Global", Section.Global)
         case 7 => ("Export", Section.Export)
         case 8 => ("Start", Section.Start)
-
+        case 9 => ("Element", Section.Element)
         case 10 => ("Code", Section.Code)
       }
       log(s"id = $idName")
