@@ -43,3 +43,19 @@ datatype    String  ->  ast.Token   ->   ast.Tree     ->     ast.Binary   ->   S
 ```
 
 The most suitable coding entrypoint is `wasm.ast.Tree`, it provide a convenient, yet nearly binary, tree.
+
+A good code starter is
+```scala
+for {
+  ast <- Module(
+    name = Some("My Module"),
+    funcs = Seq(
+      Function(
+        sig = Signature.Function(),
+        instrs = Seq(
+          Opcode.Nop,
+      ))))
+  p <- ToBinaryAst(ast)
+} yield ToBinary(p)
+
+```

@@ -14,7 +14,7 @@ object Tree {
 
   object Signature {
     final case class Block(results: Seq[Type.Block]) extends BaseTrait
-    final case class Function(params: Seq[Parameter], results: Seq[Type.Value]) extends BaseTrait
+    final case class Function(params: Seq[Parameter] = Seq.empty, results: Seq[Type.Value] = Seq.empty) extends BaseTrait
     final case class Global(mutable: Boolean, type_ : Type.Value) extends BaseTrait
     final case class Table(resizableLimits: ResizableLimits, type_ : Type.Element) extends BaseTrait
     final case class Memory(resizableLimits: ResizableLimits) extends BaseTrait
@@ -110,7 +110,8 @@ object Tree {
 
   final case class Parameter(name: Option[String], type_ : Type.Value) extends BaseTrait
   final case class Local(name: Option[String], type_ : Type.Value) extends BaseTrait
-  final case class Function(name: Option[String], typeref: Option[Variable], sig: Signature.Function, locals: Seq[Local], instrs: Seq[Expr]) extends BaseTrait
+  final case class Function(name: Option[String] = None, typeref: Option[Variable] = None, sig: Signature.Function,
+                            locals: Seq[Local] = Seq.empty, instrs: Seq[Expr]) extends BaseTrait
 
   final case class Global(name: Option[String], sig: Signature.Global, instrs: Seq[Expr]) extends BaseTrait
   final case class Table(name: Option[String], sig: Signature.Table) extends BaseTrait
