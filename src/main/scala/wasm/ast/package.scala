@@ -1,5 +1,15 @@
 package wasm
 
+/** Provides classes representing AST.
+  *
+  * The main class to use is [[ast.Tree]], for eg. the empty module.
+  * {{{
+  * scala> val tree = Module()
+  * scala> ToBinary(ToBinaryAst(tree))
+  * }}}
+  *
+  * The normal order of use is [[ast.Token]] -> [[ast.Tree]] -> [[ast.Binary]].
+  */
 package object ast {
   case class ResizableLimits(initial: Int, maximum: Option[Int])
 

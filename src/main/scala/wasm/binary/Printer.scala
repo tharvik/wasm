@@ -5,6 +5,7 @@ import LEB128.{Unsigned => U}
 import scala.language.{implicitConversions, postfixOps}
 import wasm.binary.{Printer => This}
 
+/** Parse the given `Stream[Byte]` as wasm and print any finding. */
 object Printer {
 
   type SB = Seq[Byte]

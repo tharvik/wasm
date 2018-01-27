@@ -2,6 +2,11 @@ package wasm.ast
 
 import wasm.ast.{Type => AT}
 
+/** Last AST before output.
+  *
+  * Every index, references, ... should be resolved at this point.
+  * This is the closest to binary encoding.
+  */
 object Binary {
   final case class Preamble(sections: Seq[Section])
 
@@ -111,15 +116,13 @@ object Binary {
     // TODO add more
   }
 
-  type TypeIndex = Int
-
   object Signature {
     sealed trait Import {
       val module: String
       val field: String
     }
     object Import {
-      case class Function(module: String, field: String, index: TypeIndex) extends Import
+      case class Function(module: String, field: String, index: Int) extends Import
       case class Table(module: String, field: String, type_ : Signature.Table) extends Import
       case class Memory(module: String, field: String, type_ : Signature.Memory) extends Import
       case class Global(module: String, field: String, type_ : Signature.Global) extends Import

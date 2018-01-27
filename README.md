@@ -42,4 +42,4 @@ pipeline         text.Lexer -> text.Parser -> binary.ToBinaryAst -> binary.ToBin
 datatype    String  ->  ast.Token   ->   ast.Tree     ->     ast.Binary   ->   Stream[Byte]
 ```
 
-The most suitable coding entrypoint is `wasm.ast.Tree`, it provide a convenient yet nearly binary tree, the index/variable resolution will be  done by ` binary.ToBinaryAst`.
+The most suitable coding entrypoint is `wasm.ast.Tree`, it provide a convenient, yet nearly binary, tree.

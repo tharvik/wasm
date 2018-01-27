@@ -4,6 +4,10 @@ import scala.util.parsing.input.Positional
 
 sealed trait Token extends Positional
 
+/** First AST after text.
+  *
+  * Simply a bit more type safe and logic safe than using string directly.
+  */
 object Token {
   case object LBRACE extends Token
   case object RBRACE extends Token

@@ -8,6 +8,7 @@ import scala.language.postfixOps
 import wasm.binary.{Printer, ToBinary, ToBinaryAst}
 import wasm.text._
 
+/** CLI entry point. */
 object Main extends App {
   def pipe(text: String) = for {
     l <- Lexer(text)

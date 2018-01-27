@@ -2,6 +2,12 @@ package wasm.ast
 
 import scala.util.parsing.input.Positional
 
+/** Main/Middle AST.
+  *
+  * Structured (better than [[wasm.ast.Token]]) and more type safe (no Int everywhere as in [[wasm.ast.Binary]].
+  *
+  * You may want to look at [[Tree.Module]] as it contains everything needed for a module.
+  */
 object Tree {
   sealed trait BaseTrait extends Positional
   final case class Variable(id: Either[Long, String]) extends BaseTrait
@@ -129,7 +135,10 @@ object Tree {
 
   final case class Export(field: String, kind: Kind, var_ : Variable) extends BaseTrait
 
-  final case class Module(name: Option[String], typedefs: Seq[TypeDef], funcs: Seq[Function], imports: Seq[Import],
-                          exports: Seq[Export], table: Option[Table], memory: Option[Memory], globals: Seq[Global],
-                          elements: Seq[Element], datas: Seq[Data], start: Option[Start]) extends BaseTrait
+  /** Contains everything defined in a wasm module. */
+  final case class Module(name: Option[String] = None, typedefs: Seq[TypeDef] = Seq.empty,
+                          funcs: Seq[Function] = Seq.empty, imports: Seq[Import] = Seq.empty,
+                          exports: Seq[Export] = Seq.empty, table: Option[Table] = None, memory: Option[Memory] = None,
+                          globals: Seq[Global] = Seq.empty, elements: Seq[Element] = Seq.empty,
+                          datas: Seq[Data] = Seq.empty, start: Option[Start] = None) extends BaseTrait
 }
