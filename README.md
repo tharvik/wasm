@@ -1,4 +1,4 @@
-# wasm
+# `wasm`
 WebAssembly for Scala
 
 Provide some AST and a way to convert them to wasm binary. There is also a printer for binary wasm.
@@ -6,31 +6,31 @@ Provide some AST and a way to convert them to wasm binary. There is also a print
 There is two way to use `wasm`, either as a cli or a library.
 
 # install
-It's using `sbt` for building, so next commands should be executed in the `sbt` prompt.
+It's using `sbt` for building, simply ensure that you have it.
 
-To ensure that it's working, you may want to run `test` prior to using it.
+To ensure that it's working, you may want to run `sbt test` prior to using `wasm`.
 
 ## cli
 It can be used directly from the `sbt` prompt, there is no system-wide binary installation.
 
 ## library
 To add to the local ivy storage
-```sbt
-publishLocal
+```sh
+sbt publishLocal
 ```
-and to add `libraryDependencies += "default" %% "scalawasm" % "0.1"` to your `build.sbt`
+and add `libraryDependencies += "default" %% "scalawasm" % "0.1"` to your `build.sbt`
 
 # use
 
 ## cli
 To compile wat file to wasm file
-```sbt
-run compile watfile1 watfile2 ...
+```sh
+sbt run compile watfile1 watfile2 ...
 ```
 
 To print the content of a wasm file
-```sbt
-run print wasmfile1 wasmfile2 ...
+```sh
+sbt run print wasmfile1 wasmfile2 ...
 ```
 
 ## library
