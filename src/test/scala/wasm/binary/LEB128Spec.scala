@@ -1,9 +1,9 @@
-package scalawasm.binary
+package wasm.binary
 
 import org.scalatest._
 
 import scala.language.postfixOps
-import scalawasm.binary.LEB128._
+import wasm.binary.LEB128._
 
 class LEB128Spec extends FlatSpec with Matchers {
 

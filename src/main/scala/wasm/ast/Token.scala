@@ -1,4 +1,4 @@
-package scalawasm.ast
+package wasm.ast
 
 import scala.util.parsing.input.Positional
 

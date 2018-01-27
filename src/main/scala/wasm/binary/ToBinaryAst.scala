@@ -1,12 +1,12 @@
-package scalawasm.binary
+package wasm.binary
 
 import scala.annotation.tailrec
 import scala.language.{implicitConversions, postfixOps}
-import scalawasm.ast.Binary.{Section => BSec, Signature => BSig}
-import scalawasm.ast.Tree.{Signature => TSig}
-import scalawasm.ast.{Binary => B, Tree => T}
-import scalawasm.{ast => A}
-import scalawasm.text.ParsingError
+import wasm.ast.Binary.{Section => BSec, Signature => BSig}
+import wasm.ast.Tree.{Signature => TSig}
+import wasm.ast.{Binary => B, Tree => T}
+import wasm.{ast => A}
+import wasm.text.ParsingError
 
 object ToBinaryAst {
 

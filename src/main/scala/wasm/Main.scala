@@ -1,12 +1,12 @@
-package scalawasm
+package wasm
 
 import java.io.File
 import java.nio.file._
 
 import scala.io.Source.fromFile
 import scala.language.postfixOps
-import scalawasm.binary.{Printer, ToBinary, ToBinaryAst}
-import scalawasm.text._
+import wasm.binary.{Printer, ToBinary, ToBinaryAst}
+import wasm.text._
 
 object Main extends App {
   def pipe(text: String) = for {

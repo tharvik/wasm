@@ -1,9 +1,9 @@
-package scalawasm.binary
+package wasm.binary
 
 import LEB128.{Signed => S}
 import LEB128.{Unsigned => U}
 import scala.language.{implicitConversions, postfixOps}
-import scalawasm.binary.{Printer => This}
+import wasm.binary.{Printer => This}
 
 object Printer {
 

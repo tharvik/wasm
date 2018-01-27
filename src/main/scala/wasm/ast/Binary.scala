@@ -1,6 +1,6 @@
-package scalawasm.ast
+package wasm.ast
 
-import scalawasm.ast.{Type => AT}
+import wasm.ast.{Type => AT}
 
 object Binary {
   final case class Preamble(sections: Seq[Section])

@@ -1,7 +1,7 @@
-package scalawasm.text
+package wasm.text
 
 import scala.util.parsing.input.{NoPosition, Position, Reader}
-import scalawasm.ast.Token
+import wasm.ast.Token
 
 class TokenReader(tokens: Seq[Token]) extends Reader[Token] {
   override def first: Token = tokens.head

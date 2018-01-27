@@ -1,12 +1,12 @@
-package scalawasm.text
+package wasm.text
 
 import scala.language.postfixOps
 import scala.util.parsing.combinator.Parsers
-import scalawasm.ast._
-import scalawasm.ast.Tree.Opcode._
-import scalawasm.ast.Tree._
-import scalawasm.ast.Token._
-import scalawasm.Config.enableSpecCompat
+import wasm.ast._
+import wasm.ast.Tree.Opcode._
+import wasm.ast.Tree._
+import wasm.ast.Token._
+import wasm.Config.enableSpecCompat
 
 object Parser extends Parsers {
   override type Elem = Token

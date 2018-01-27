@@ -1,4 +1,4 @@
-package scalawasm.binary
+package wasm.binary
 
 import scala.language.postfixOps
 import scala.math.{ceil, pow}

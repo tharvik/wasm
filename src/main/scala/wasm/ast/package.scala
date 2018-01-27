@@ -1,4 +1,4 @@
-package scalawasm
+package wasm
 
 package object ast {
   case class ResizableLimits(initial: Int, maximum: Option[Int])

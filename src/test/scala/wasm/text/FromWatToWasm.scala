@@ -1,4 +1,4 @@
-package scalawasm.text
+package wasm.text
 
 import java.io.File
 import java.nio.file.{Files, Paths}
@@ -8,10 +8,10 @@ import org.scalatest._
 import scala.io.Source.fromFile
 import scala.language.postfixOps
 import scala.sys.process._
-import scalawasm.Main.pipe
-import scalawasm.Config.enableSpecCompat
-import scalawasm.binary.Printer
-import scalawasm.right
+import wasm.Main.pipe
+import wasm.Config.enableSpecCompat
+import wasm.binary.Printer
+import wasm.right
 
 class FromWatToWasm extends FlatSpec with Matchers {
   private def getReferenceBinary(text: String): Stream[Byte] = {

@@ -1,4 +1,4 @@
-package scalawasm
+package wasm
 
 import scala.util.parsing.input.Position
 

@@ -1,14 +1,14 @@
-package scalawasm.binary
+package wasm.binary
 
 import scala.language.postfixOps
-import scalawasm.Config.enableSpecCompat
-import scalawasm.ast.Binary.Opcode.Load.SizeAndSign
-import scalawasm.ast.Binary.Opcode._
-import scalawasm.ast.Binary.{Section => BSec, Signature => BSig}
-import scalawasm.ast.{Binary => B, Type => AT}
-import scalawasm.{ast => A}
-import scalawasm.binary.LEB128.Type._
-import scalawasm.binary.{ToBinary => This}
+import wasm.Config.enableSpecCompat
+import wasm.ast.Binary.Opcode.Load.SizeAndSign
+import wasm.ast.Binary.Opcode._
+import wasm.ast.Binary.{Section => BSec, Signature => BSig}
+import wasm.ast.{Binary => B, Type => AT}
+import wasm.{ast => A}
+import wasm.binary.LEB128.Type._
+import wasm.binary.{ToBinary => This}
 
 object ToBinary {
 

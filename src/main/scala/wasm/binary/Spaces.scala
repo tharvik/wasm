@@ -1,6 +1,6 @@
-package scalawasm.binary
+package wasm.binary
 
-import scalawasm.ast.Binary.{Signature => BSig}
+import wasm.ast.Binary.{Signature => BSig}
 
 case class Spaces(types: Spaces.TypeSpace, funcs: Spaces.FunctionSpace, globals: Spaces.GlobalSpace,
                   memories: Spaces.MemorySpace, tables: Spaces.TableSpace, locals: Spaces.LocalSpace,
