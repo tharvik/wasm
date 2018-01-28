@@ -1,0 +1,24 @@
+language: scala
+scala:
+  - 2.12.4
+
+env:
+  - SPEC_COMPAT=true
+  - SPEC_COMPAT=false
+
+addons:
+  apt:
+    sources:
+      - avsm
+    packages:
+      - ocaml-nox
+
+install:
+  - curl -L https://github.com/WebAssembly/spec/archive/wg_draft1.tar.gz | tar xzf -
+  - cd spec-wg_draft1/interpreter
+  - make opt
+  - export PATH="$PATH:$PWD"
+  - cd ../..
+
+before_script:
+  - sed -i "s,\(enableSpecCompat\s\+=\).*$,\1 $SPEC_COMPAT," src/main/scala/wasm/Config.scala
