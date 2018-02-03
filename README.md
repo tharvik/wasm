@@ -59,3 +59,43 @@ for {
 } yield ToBinary(p)
 
 ```
+
+# todo
+
+## short
+ * `ToBinaryAst.Section.Export` works only for function, it's trivial to port it to
+   supports others
+ * `ToBinaryAst.getSections` could use some refactoring, to nicely separate
+   which spaces can be used in which section
+ * find a good macro system for Scala, to reduce some value duplication in
+   `LEB128.Type`
+
+## medium
+ * there is structural support for some wasm extension, such has multi return or
+   multi memory, but it still have to be defined in spec and fully
+   implemented/tested
+ * Data section is implemented until `Tree` but not in the remaining pipeline
+ * Custom section is not implemented, there is partial structural support for it
+ * remove many warning by using dedicated case object instead of having a
+   generic way to do it
+
+## long
+ * parser is too simple, it support only "regular" wat, but the spec
+   documentation is not very precise either, that would need some improvement
+   based on the new version of the spec
+   having a better parser would lead to very easy testing, as drop-in of files
+   would works, we could reuse directly the core testing suite of the spec repo
+   (there is still some issues, such as them using some undefined opcode)
+   * correctly handle multi lines comments
+   * parse the full syntax
+   * int/float values are badly handle, it will break on some corner cases,
+     also, the parsing is based on naïve understanding (previously undefinied);
+     see the "toInt" TODOs
+   * there is some structural check we can push to parser, such as i32 can't
+     load a value bigger that the actual available range
+   * order of `module` opcode is either not well defined or wrong
+ * `Printer` can be much cooler than that and try to regenerate the wat input
+   and having a way to print wasm and also a decompiler
+ * support other compilers than the reference one
+ * remove quirks used for spec compatibility, but that would require that
+   WebAssembly/spec#625 be fixed first; check for `Config.enableSpecCompat`
