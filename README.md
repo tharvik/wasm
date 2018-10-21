@@ -89,7 +89,7 @@ for {
    * correctly handle multi lines comments
    * parse the full syntax
    * int/float values are badly handle, it will break on some corner cases,
-     also, the parsing is based on naïve understanding (previously undefinied);
+     also, the parsing is based on naïve understanding (previously undefined);
      see the "toInt" TODOs
    * there is some structural check we can push to parser, such as i32 can't
      load a value bigger that the actual available range
